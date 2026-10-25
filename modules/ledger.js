@@ -100,7 +100,7 @@ App.register('ledger', function(container){
       var dx = e.changedTouches[0].clientX - dgX;
       var w = container.offsetWidth || window.innerWidth;
       var next = (dx < 0) ? (dgIdx+1) : (dgIdx-1);
-      if(Math.abs(dx) > w/3 && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
+      if(Math.abs(dx) > w/4 && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
       else { positionStrip(true); }
     }
     dgX = null; dgY = null; dgH = null; dgIdx = -1;
