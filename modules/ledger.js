@@ -1,9 +1,10 @@
 /* modules/ledger.js —— 账本 */
 (function(){
 'use strict';
+var sub = 'flow'; // 模块级：离开账本再回来保留，重启重置为流水
 App.register('ledger', function(container){
   var L = App.Logic;
-  var sub = 'flow', filter = 'all', query = '', openMonths = {};
+  var filter = 'all', query = '', openMonths = {};
   var editingId = null, editingBase = 0;
 
   var EMO = {餐饮:'🍚',交通:'🚌',购物:'🛒',居住:'🏠',水电燃气:'💡',娱乐:'🎮',医疗:'💊',教育:'📚',通讯:'📱',人情:'🎁',日用:'🧻',服饰:'👕',美容美发:'💇',运动:'⚽',宠物:'🐶',旅行:'✈️',烟酒:'🚬',保险:'🛡️',其他:'📦',工资:'💰',奖金:'🧧',理财:'📈',兼职:'💼',红包:'🧧',报销:'🧾',礼金:'🎁',退款:'↩️',二手:'🔄'};
@@ -66,7 +67,7 @@ App.register('ledger', function(container){
   function positionStrip(animate){
     var strip = container.querySelector('.ledger-strip'); if(!strip) return;
     var idx = PAGES.indexOf(sub); if(idx<0) idx=0;
-    strip.style.transition = animate ? 'transform .3s cubic-bezier(.22,.61,.36,1)' : 'none';
+    strip.style.transition = animate ? 'transform .18s cubic-bezier(.22,.61,.36,1)' : 'none';
     strip.style.transform = 'translateX(' + (-idx*20) + '%)';
   }
   function switchSub(s){
@@ -74,19 +75,22 @@ App.register('ledger', function(container){
     container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
     positionStrip(true);
   }
-  // 横向传送带滑动翻页（小说式：百分比跟手 + 松手翻页/回弹）
-  var dgX = null, dgY = null, dgIdx = -1, dgH = null;
+  // 横向传送带滑动翻页（小说式：百分比跟手 + 快速轻扫 + 松手吸附）
+  var dgX = null, dgY = null, dgIdx = -1, dgH = null, dgLx = null, dgLt = null, dgVx = 0;
   container.addEventListener('touchstart', function(e){
     if(!container.querySelector('.ledger-strip')) return;
     dgX = e.touches[0].clientX; dgY = e.touches[0].clientY;
     dgIdx = PAGES.indexOf(sub); if(dgIdx<0) dgIdx=0;
-    dgH = null;
+    dgH = null; dgLx = e.touches[0].clientX; dgLt = Date.now(); dgVx = 0;
   }, {passive:true});
   container.addEventListener('touchmove', function(e){
     if(dgX == null) return;
     var dx = e.touches[0].clientX - dgX, dy = e.touches[0].clientY - dgY;
     if(dgH == null){ if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)) dgH = true; else if(Math.abs(dy)>10) dgH = false; }
     if(dgH !== true) return;
+    var now = Date.now(), dt = now - dgLt;
+    if(dt>0) dgVx = (e.touches[0].clientX - dgLx) / dt;
+    dgLx = e.touches[0].clientX; dgLt = now;
     var strip = container.querySelector('.ledger-strip'); if(!strip) return;
     var off = dx;
     if(dgIdx === 0 && dx > 0) off = dx * 0.35;
@@ -100,7 +104,7 @@ App.register('ledger', function(container){
       var dx = e.changedTouches[0].clientX - dgX;
       var w = container.offsetWidth || window.innerWidth;
       var next = (dx < 0) ? (dgIdx+1) : (dgIdx-1);
-      if(Math.abs(dx) > w/4 && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
+      if((Math.abs(dx) > w*0.15 || Math.abs(dgVx) > 0.5) && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
       else { positionStrip(true); }
     }
     dgX = null; dgY = null; dgH = null; dgIdx = -1;
