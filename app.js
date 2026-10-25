@@ -222,6 +222,7 @@ function renderView(){
   var back = (active==='home') ? '' : '<button class="back-btn" data-back>← 返回</button>';
   var h = '<div class="view-head">'+back+'<h1>'+mod.icon+' '+mod.name+'</h1></div><p class="desc">'+mod.desc+'</p>';
   v.innerHTML = h + '<div id="module-body"></div>';
+  v.classList.remove('slide-in'); void v.offsetWidth; v.classList.add('slide-in');
   var body = $('module-body');
   var bb = v.querySelector('.back-btn');
   if(bb){ bb.addEventListener('click', function(){ goBack(); }); }

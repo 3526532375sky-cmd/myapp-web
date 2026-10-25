@@ -456,3 +456,23 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .modal-box{overscroll-behavior:contain;}
 .memo-sheet-box{overscroll-behavior:contain;}
 .wv-body{overscroll-behavior:contain;}
+
+/* ===== 手机端 UI 优化：玻璃导航 + 选中态 + 滑动切换 ===== */
+:root{ --glass:rgba(255,255,255,.72); --glass-bd:rgba(255,255,255,.45); }
+@media (prefers-color-scheme:dark){ :root{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255,.09); } }
+html[data-theme="light"]{ --glass:rgba(255,255,255,.72); --glass-bd:rgba(255,255,255,.45); }
+html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255,.09); }
+@media (max-width:768px){
+  .sidebar{background:var(--glass);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-top:1px solid var(--glass-bd);}
+  .seg2-tabs{background:var(--glass);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid var(--glass-bd);}
+  #nav button{transition:transform .12s,color .12s;}
+  #nav button span{display:inline-block;transition:transform .12s;}
+  #nav button.on{transform:translateY(-2px);font-weight:700;}
+  #nav button.on span{transform:scale(1.15);}
+  .seg2-tabs button.on{background:var(--accent);color:#fff;font-weight:700;box-shadow:var(--shadow-1);}
+  .seg2-tabs button:not(.on){color:var(--text-2);}
+}
+.view{animation:none;}
+.slide-in{animation:slideIn .22s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){ .slide-in{animation:none;} }
