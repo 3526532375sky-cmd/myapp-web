@@ -33,9 +33,11 @@ App.register('ledger', function(container){
         '</div>';
       tabs = container.querySelector('.seg2-tabs');
       tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ switchSub(b.getAttribute('data-sub')); } });
+      var viewport = document.createElement('div'); viewport.className = 'ledger-viewport';
       strip = document.createElement('div'); strip.className = 'ledger-strip';
       PAGES.forEach(function(s){ var p=document.createElement('div'); p.className='ledger-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
-      tabs.after(strip);
+      viewport.appendChild(strip);
+      tabs.after(viewport);
     }
     tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
     renderAllPages(ms);
