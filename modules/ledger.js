@@ -23,7 +23,6 @@ App.register('ledger', function(container){
   function render(){
     var ms = monthSum();
     var tabs = container.querySelector('.seg2-tabs');
-    var strip = container.querySelector('.ledger-strip');
     if(!tabs){
       container.innerHTML = '<div class="seg2 seg2-tabs">'+
         '<button data-sub="flow" class="on">流水</button>'+
@@ -34,9 +33,12 @@ App.register('ledger', function(container){
         '</div>';
       tabs = container.querySelector('.seg2-tabs');
       tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ switchSub(b.getAttribute('data-sub')); } });
-      var viewport = document.createElement('div'); viewport.className = 'ledger-viewport';
-      strip = document.createElement('div'); strip.className = 'ledger-strip';
-      PAGES.forEach(function(s){ var p=document.createElement('div'); p.className='ledger-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
+      var viewport = document.createElement('div'); viewport.className = 'pager-viewport';
+      strip = document.createElement('div'); strip.className = 'pager-strip';
+      strip.setAttribute('data-total', PAGES.length);
+      strip.setAttribute('data-idx', PAGES.indexOf(sub));
+      strip.style.width = (PAGES.length * 100) + '%';
+      PAGES.forEach(function(s){ var p=document.createElement('div'); p.className='pager-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
       viewport.appendChild(strip);
       tabs.after(viewport);
     }
@@ -65,50 +67,19 @@ App.register('ledger', function(container){
     });
   }
   function positionStrip(animate){
-    var strip = container.querySelector('.ledger-strip'); if(!strip) return;
+    var strip = container.querySelector('.pager-strip'); if(!strip) return;
+    var total = parseInt(strip.getAttribute('data-total') || '1', 10);
     var idx = PAGES.indexOf(sub); if(idx<0) idx=0;
+    strip.setAttribute('data-idx', idx);
     strip.style.transition = animate ? 'transform .18s cubic-bezier(.22,.61,.36,1)' : 'none';
-    strip.style.transform = 'translateX(' + (-idx*20) + '%)';
+    strip.style.transform = 'translateX(' + (-idx*(100/total)) + '%)';
   }
   function switchSub(s){
     sub = s;
     container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
     positionStrip(true);
   }
-  // 横向传送带滑动翻页（小说式：百分比跟手 + 快速轻扫 + 松手吸附）
-  var dgX = null, dgY = null, dgIdx = -1, dgH = null, dgLx = null, dgLt = null, dgVx = 0;
-  container.addEventListener('touchstart', function(e){
-    if(!container.querySelector('.ledger-strip')) return;
-    dgX = e.touches[0].clientX; dgY = e.touches[0].clientY;
-    dgIdx = PAGES.indexOf(sub); if(dgIdx<0) dgIdx=0;
-    dgH = null; dgLx = e.touches[0].clientX; dgLt = Date.now(); dgVx = 0;
-  }, {passive:true});
-  container.addEventListener('touchmove', function(e){
-    if(dgX == null) return;
-    var dx = e.touches[0].clientX - dgX, dy = e.touches[0].clientY - dgY;
-    if(dgH == null){ if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)) dgH = true; else if(Math.abs(dy)>10) dgH = false; }
-    if(dgH !== true) return;
-    var now = Date.now(), dt = now - dgLt;
-    if(dt>0) dgVx = (e.touches[0].clientX - dgLx) / dt;
-    dgLx = e.touches[0].clientX; dgLt = now;
-    var strip = container.querySelector('.ledger-strip'); if(!strip) return;
-    var off = dx;
-    if(dgIdx === 0 && dx > 0) off = dx * 0.35;
-    if(dgIdx === PAGES.length-1 && dx < 0) off = dx * 0.35;
-    strip.style.transition = 'none';
-    strip.style.transform = 'translateX(calc(' + (-dgIdx*20) + '% + ' + off + 'px))';
-  }, {passive:true});
-  container.addEventListener('touchend', function(e){
-    if(dgX == null) return;
-    if(dgH === true){
-      var dx = e.changedTouches[0].clientX - dgX;
-      var w = container.offsetWidth || window.innerWidth;
-      var next = (dx < 0) ? (dgIdx+1) : (dgIdx-1);
-      if((Math.abs(dx) > w*0.15 || Math.abs(dgVx) > 0.5) && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
-      else { positionStrip(true); }
-    }
-    dgX = null; dgY = null; dgH = null; dgIdx = -1;
-  }, {passive:true});
+
 
   function goalBudgetHtml(ms){
     var s = App.data.ledger.settings || {};

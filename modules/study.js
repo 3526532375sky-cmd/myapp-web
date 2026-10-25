@@ -1,44 +1,78 @@
 ﻿/* modules/study.js —— 学习计划 */
 (function(){
 'use strict';
+var sub = 'goals';
 App.register('study', function(container){
-  var sub = 'goals';
   var q = '';
   var reviewing = false, revQueue = [], revIdx = 0, revFlipped = false;
   
+  var SUBS = ['goals','notes','resources','cards','reviews'];
   function render(){
     var tabs = container.querySelector('.seg2-tabs');
+    var strip = container.querySelector('.pager-strip');
     if(!tabs){
       var arr = [['goals','计划'],['notes','笔记'],['resources','资料'],['cards','闪卡'],['reviews','复盘']];
       container.innerHTML = '<div class="seg2 seg2-tabs">'+arr.map(function(t){ return '<button data-sub="'+t[0]+'">'+t[1]+'</button>'; }).join('')+'</div>';
       tabs = container.querySelector('.seg2-tabs');
-      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); reviewing=false; revFlipped=false; render(); } });
-      var bd = document.createElement('div'); bd.id = 'studyBody'; tabs.after(bd);
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); reviewing=false; revFlipped=false; switchSub(b.getAttribute('data-sub')); } });
+      var viewport = document.createElement('div'); viewport.className = 'pager-viewport';
+      strip = document.createElement('div'); strip.className = 'pager-strip';
+      strip.setAttribute('data-total', SUBS.length);
+      strip.setAttribute('data-idx', SUBS.indexOf(sub));
+      strip.style.width = (SUBS.length * 100) + '%';
+      SUBS.forEach(function(x){ var p=document.createElement('div'); p.className='pager-page'; p.setAttribute('data-page', x); strip.appendChild(p); });
+      viewport.appendChild(strip);
+      tabs.after(viewport);
     }
     tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
-    var body = container.querySelector('#studyBody');
-    body.innerHTML = renderBody();
-    bind();
+    renderAllPages();
+    positionStrip(false);
+    bindAll();
+  }
+  function renderAllPages(){
+    var cur = sub;
+    SUBS.forEach(function(s2){
+      var pg = container.querySelector('[data-page="'+s2+'"]'); if(!pg) return;
+      sub = s2;
+      pg.innerHTML = renderBody();
+    });
+    sub = cur;
+  }
+  function positionStrip(animate){
+    var strip = container.querySelector('.pager-strip'); if(!strip) return;
+    var total = parseInt(strip.getAttribute('data-total') || '1', 10);
+    var idx = SUBS.indexOf(sub); if(idx<0) idx=0;
+    strip.setAttribute('data-idx', idx);
+    strip.style.transition = animate ? 'transform .18s cubic-bezier(.22,.61,.36,1)' : 'none';
+    strip.style.transform = 'translateX(' + (-idx*(100/total)) + '%)';
+  }
+  function switchSub(s2){
+    sub = s2;
+    container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    positionStrip(true);
   }
 
-  function bind(){
-    var body = container.querySelector('#studyBody');
-    if(sub==='goals'){
+  function bindAll(){
+    var pg = function(s){ return container.querySelector('[data-page="'+s+'"]'); };
+    var body = pg('goals');
+    if(body){
       body.querySelectorAll('[data-toggle]').forEach(function(b){ b.addEventListener('click', function(){ var g=App.data.study.goals.find(function(x){return x.id===b.getAttribute('data-toggle');}); if(g){g.done=!g.done;App.setData(App.data);render();} }); });
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-del'); App.deleteWithUndo({ apply:function(){ App.data.study.goals=(App.data.study.goals||[]).filter(function(x){return x.id!==id;}); }, render:render }); }); });
       var inp=body.querySelector('#goalInput'); if(inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ var v=inp.value.trim(); if(!v){App.toast('请输入内容');return;} App.data.study.goals=App.data.study.goals||[]; App.data.study.goals.push({id:'g'+Date.now(),text:v,done:false,ts:Date.now()}); App.setData(App.data); render(); } });
     }
-    if(sub==='notes'||sub==='resources'||sub==='reviews'||sub==='cards'){
-      body.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ editItem(b.getAttribute('data-edit')); }); });
-      body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delItem(b.getAttribute('data-del')); }); });
-      var a=body.querySelector('#btnAdd'); if(a) a.addEventListener('click', function(){ editItem(null); });
-      var si=body.querySelector('.search-input'); if(si){ var composing=false; si.addEventListener('compositionstart', function(){ composing=true; }); si.addEventListener('compositionend', function(){ composing=false; setTimeout(applySearch,0); }); si.addEventListener('input', function(){ if(composing) return; applySearch(); }); function applySearch(){ q=si.value; var pos=si.selectionStart; render(); var nsi=container.querySelector('.search-input'); if(nsi){ nsi.focus(); nsi.setSelectionRange(pos,pos); } } }
-    }
-    if(sub==='cards'){
-      body.querySelectorAll('[data-flip]').forEach(function(el){ el.addEventListener('click', function(){ flipCard(el.getAttribute('data-flip')); }); });
-      var br=body.querySelector('#btnReview'); if(br) br.addEventListener('click', function(){ revQueue=App.Logic.dueCards(App.data.study.cards||[], App.Logic.todayStr()); revIdx=0; revFlipped=false; reviewing=true; render(); });
-      var bs=body.querySelector('#btnShow'); if(bs) bs.addEventListener('click', function(){ revFlipped=true; render(); });
-      body.querySelectorAll('[data-q]').forEach(function(b){ b.addEventListener('click', function(){ var qv=parseInt(b.getAttribute('data-q'),10); var card=revQueue[revIdx]; if(card){ var u=App.Logic.sm2Review(card, qv, App.Logic.todayStr()); card.easeFactor=u.easeFactor; card.repetition=u.repetition; card.interval=u.interval; card.due=u.due; } App.setData(App.data); revIdx++; revFlipped=false; if(revIdx>=revQueue.length){ reviewing=false; App.toast('今日复习完成 🎉'); } render(); }); });
+    ['notes','resources','reviews','cards'].forEach(function(s2){
+      var b2 = pg(s2); if(!b2) return;
+      b2.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ sub=s2; editItem(b.getAttribute('data-edit')); }); });
+      b2.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ sub=s2; delItem(b.getAttribute('data-del')); }); });
+      var a=b2.querySelector('#btnAdd'); if(a) a.addEventListener('click', function(){ sub=s2; editItem(null); });
+      var si=b2.querySelector('.search-input'); if(si){ var composing=false; si.addEventListener('compositionstart', function(){ composing=true; }); si.addEventListener('compositionend', function(){ composing=false; setTimeout(function(){ sub=s2; applySearch(); },0); }); si.addEventListener('input', function(){ if(composing) return; sub=s2; applySearch(); }); function applySearch(){ q=si.value; var pos=si.selectionStart; render(); var nsi=container.querySelector('[data-page="'+s2+'"] .search-input'); if(nsi){ nsi.focus(); nsi.setSelectionRange(pos,pos); } } }
+    });
+    var bc = pg('cards');
+    if(bc){
+      bc.querySelectorAll('[data-flip]').forEach(function(el){ el.addEventListener('click', function(){ flipCard(el.getAttribute('data-flip')); }); });
+      var br=bc.querySelector('#btnReview'); if(br) br.addEventListener('click', function(){ revQueue=App.Logic.dueCards(App.data.study.cards||[], App.Logic.todayStr()); revIdx=0; revFlipped=false; reviewing=true; render(); });
+      var bs=bc.querySelector('#btnShow'); if(bs) bs.addEventListener('click', function(){ revFlipped=true; render(); });
+      bc.querySelectorAll('[data-q]').forEach(function(b){ b.addEventListener('click', function(){ var qv=parseInt(b.getAttribute('data-q'),10); var card=revQueue[revIdx]; if(card){ var u=App.Logic.sm2Review(card, qv, App.Logic.todayStr()); card.easeFactor=u.easeFactor; card.repetition=u.repetition; card.interval=u.interval; card.due=u.due; } App.setData(App.data); revIdx++; revFlipped=false; if(revIdx>=revQueue.length){ reviewing=false; App.toast('今日复习完成 🎉'); } render(); }); });
     }
   }
   function renderBody(){

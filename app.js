@@ -336,56 +336,45 @@ function init(){
   $('btnLock').addEventListener('click', function(){ window.App.lock(); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
   $('nav').addEventListener('click', function(e){ var b=e.target.closest('button[data-m]'); if(b) switchModule(b.getAttribute('data-m')); });
-  // 内容区水平滑动切换子页签（借鉴旧账本：跟手 + 边缘阻尼 + 速度判断 + 回弹）
-  var swX = null, swY = null, swSeg = null, swBodies = [], swH = null, swLastX = null, swLastT = null, swVx = 0, swIdx = -1, swCount = 0, swW = 0;
+  // 统一横向翻页：各模块渲染 .pager-strip 后自动生效（document 级，内容少时空白区也能划）
+  var pgX = null, pgY = null, pgStrip = null, pgIdx = -1, pgTotal = 0, pgH = null, pgLx = null, pgLt = null, pgVx = 0;
   document.addEventListener('touchstart', function(e){
-    var inContent = e.target.closest ? e.target.closest('.content') : null;
-    var seg = document.querySelector('.seg2-tabs');
-    var hasStrip = document.querySelector('.ledger-strip');
-    if(inContent && seg && !hasStrip){
-      swX = e.touches[0].clientX; swY = e.touches[0].clientY; swSeg = seg; swH = null;
-      swBodies = [];
-      if(seg.previousElementSibling) swBodies.push(seg.previousElementSibling);
-      if(seg.nextElementSibling) swBodies.push(seg.nextElementSibling);
-      var btns = seg.querySelectorAll('button[data-sub]');
-      var cur = seg.querySelector('button.on');
-      swIdx = cur ? Array.prototype.indexOf.call(btns, cur) : 0;
-      swCount = btns.length;
-      swW = swBodies[0] ? swBodies[0].offsetWidth : window.innerWidth;
-      swLastX = e.touches[0].clientX; swLastT = Date.now(); swVx = 0;
-    } else { swX = null; swY = null; swSeg = null; swBodies = []; swH = null; swIdx = -1; swCount = 0; }
+    var strip = document.querySelector('.pager-strip');
+    if(!strip){ pgStrip = null; return; }
+    pgStrip = strip;
+    pgTotal = parseInt(strip.getAttribute('data-total') || '1', 10);
+    pgIdx = parseInt(strip.getAttribute('data-idx') || '0', 10);
+    pgX = e.touches[0].clientX; pgY = e.touches[0].clientY;
+    pgH = null; pgLx = e.touches[0].clientX; pgLt = Date.now(); pgVx = 0;
   }, {passive:true});
   document.addEventListener('touchmove', function(e){
-    if(swX == null) return;
-    var dx = e.touches[0].clientX - swX, dy = e.touches[0].clientY - swY;
-    if(swH == null){
-      if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) swH = true;
-      else if(Math.abs(dy) > 10) swH = false;
-    }
-    if(swH !== true) return;
-    var now = Date.now(), dt = now - swLastT;
-    if(dt > 0) swVx = (e.touches[0].clientX - swLastX) / dt;
-    swLastX = e.touches[0].clientX; swLastT = now;
+    if(pgX == null || !pgStrip) return;
+    var dx = e.touches[0].clientX - pgX, dy = e.touches[0].clientY - pgY;
+    if(pgH == null){ if(Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) pgH = true; else if(Math.abs(dy) > 10) pgH = false; }
+    if(pgH !== true) return;
+    var now = Date.now(), dt = now - pgLt; if(dt > 0) pgVx = (e.touches[0].clientX - pgLx) / dt;
+    pgLx = e.touches[0].clientX; pgLt = now;
     var off = dx;
-    if(swIdx === 0 && dx > 0) off = dx * 0.35;
-    if(swIdx === swCount-1 && dx < 0) off = dx * 0.35;
-    swBodies.forEach(function(b){ b.style.transition = 'none'; b.style.transform = 'translateX(' + off + 'px)'; });
+    if(pgIdx === 0 && dx > 0) off = dx * 0.35;
+    if(pgIdx === pgTotal-1 && dx < 0) off = dx * 0.35;
+    pgStrip.style.transition = 'none';
+    pgStrip.style.transform = 'translateX(calc(' + (-pgIdx * (100/pgTotal)) + '% + ' + off + 'px))';
   }, {passive:true});
   document.addEventListener('touchend', function(e){
-    if(swX == null) return;
-    if(swH === true){
-      var dx = e.changedTouches[0].clientX - swX;
-      var shouldFlip = Math.abs(dx) > swW * 0.25 || Math.abs(swVx) > 0.5;
-      var next = (dx < 0) ? (swIdx+1) : (swIdx-1);
-      swBodies.forEach(function(b){ b.style.transition = 'none'; b.style.transform = ''; });
-      if(shouldFlip && next >= 0 && next < swCount && swSeg){
-        var btns = swSeg.querySelectorAll('button[data-sub]');
-        btns[next].click();
-      } else if(swBodies.length){
-        swBodies.forEach(function(b){ b.style.transition = 'transform .25s cubic-bezier(.22,.61,.36,1)'; b.style.transform = ''; });
+    if(pgX == null) return;
+    if(pgH === true){
+      var dx = e.changedTouches[0].clientX - pgX;
+      var w = pgStrip ? pgStrip.parentNode.clientWidth : window.innerWidth;
+      var next = (dx < 0) ? (pgIdx+1) : (pgIdx-1);
+      if((Math.abs(dx) > w*0.15 || Math.abs(pgVx) > 0.5) && next >= 0 && next < pgTotal){
+        var btns = document.querySelectorAll('.seg2-tabs button[data-sub]');
+        if(btns[next]) btns[next].click();
+      } else if(pgStrip){
+        pgStrip.style.transition = 'transform .18s cubic-bezier(.22,.61,.36,1)';
+        pgStrip.style.transform = 'translateX(' + (-pgIdx * (100/pgTotal)) + '%)';
       }
     }
-    swX = null; swY = null; swSeg = null; swBodies = []; swH = null; swIdx = -1; swCount = 0;
+    pgX = null; pgY = null; pgStrip = null; pgIdx = -1; pgH = null;
   }, {passive:true});
 }
 init();

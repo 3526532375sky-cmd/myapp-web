@@ -99,8 +99,9 @@ document.addEventListener('keydown', function(e){
   else if(e.key==='ArrowDown'){ e.preventDefault(); weekNav(1); }
 });
 
+var sub='plan';
 App.register('fitness', function(container){
-  var sub='plan', filter='all';
+  var filter='all';
   var q='';
   var selDate=null; // 锻炼日历选中的日期；null=今天
   var calY=0, calM=0; // 日历显示的年/月
@@ -113,40 +114,74 @@ App.register('fitness', function(container){
   container.addEventListener('click', onPlanClick);
   container.addEventListener('keydown', onPlanKey);
 
+  var SUBS=['plan','records','workouts','weights'];
   function render(){
     var tabs = container.querySelector('.seg2-tabs');
+    var strip = container.querySelector('.pager-strip');
     if(!tabs){
       container.innerHTML = '<div class="seg2 seg2-tabs"><button data-sub="plan">计划</button><button data-sub="records">动作库</button><button data-sub="workouts">训练记录</button><button data-sub="weights">体重</button></div>';
       tabs = container.querySelector('.seg2-tabs');
-      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
-      var bd = document.createElement('div'); bd.id = 'fitBody'; tabs.after(bd);
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ switchSub(b.getAttribute('data-sub')); } });
+      var viewport = document.createElement('div'); viewport.className = 'pager-viewport';
+      strip = document.createElement('div'); strip.className = 'pager-strip';
+      strip.setAttribute('data-total', SUBS.length);
+      strip.setAttribute('data-idx', SUBS.indexOf(sub));
+      strip.style.width = (SUBS.length * 100) + '%';
+      SUBS.forEach(function(s){ var p=document.createElement('div'); p.className='pager-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
+      viewport.appendChild(strip);
+      tabs.after(viewport);
     }
     tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
-    var body = container.querySelector('#fitBody');
-    body.innerHTML = (sub==='records'?searchBox():'') + renderBody();
-    bind();
+    renderAllPages();
+    positionStrip(false);
+    bindAll();
   }
-
+  function renderAllPages(){
+    SUBS.forEach(function(s){
+      var pg = container.querySelector('[data-page="'+s+'"]'); if(!pg) return;
+      var html = '';
+      if(s==='plan') html = renderPlan();
+      else if(s==='records') html = searchBox() + renderRecords();
+      else if(s==='workouts') html = renderWorkouts();
+      else html = renderWeights();
+      pg.innerHTML = html;
+    });
+  }
+  function positionStrip(animate){
+    var strip = container.querySelector('.pager-strip'); if(!strip) return;
+    var idx = SUBS.indexOf(sub); if(idx<0) idx=0;
+    strip.setAttribute('data-idx', idx);
+    strip.style.transition = animate ? 'transform .18s cubic-bezier(.22,.61,.36,1)' : 'none';
+    strip.style.transform = 'translateX(' + (-idx*(100/SUBS.length)) + '%)';
+  }
+  function switchSub(s){
+    sub = s;
+    container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    positionStrip(true);
+  }
 
   function searchBox(){ return '<div class="row" style="margin-bottom:8px"><input class="input search-input" placeholder="搜索动作（名称/要点/来源）" value="'+App.esc(q)+'"></div>'; }
 
-  function bind(){
-    var body=container.querySelector('#fitBody');
-    if(sub==='plan'){ bindPlan(body); }
-    var si=body.querySelector('.search-input'); if(si){ var composing=false; si.addEventListener('compositionstart', function(){ composing=true; }); si.addEventListener('compositionend', function(){ composing=false; setTimeout(applySearch,0); }); si.addEventListener('input', function(){ if(composing) return; applySearch(); }); function applySearch(){ q=si.value; var pos=si.selectionStart; render(); var nsi=container.querySelector('.search-input'); if(nsi){ nsi.focus(); nsi.setSelectionRange(pos,pos); } } }
-    if(sub==='records'){
-      var f=body.querySelector('#fitFilter'); if(f) f.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; filter=b.getAttribute('data-f'); render(); });
+  function bindAll(){
+    var pg = function(s){ return container.querySelector('[data-page="'+s+'"]'); };
+    var body = pg('plan'); if(body){ bindPlan(body); }
+    body = pg('records');
+    if(body){
+      var si=body.querySelector('.search-input'); if(si){ var composing=false; si.addEventListener('compositionstart', function(){ composing=true; }); si.addEventListener('compositionend', function(){ composing=false; setTimeout(applySearch,0); }); si.addEventListener('input', function(){ if(composing) return; applySearch(); }); function applySearch(){ q=si.value; var pos=si.selectionStart; render(); var nsi=container.querySelector('.search-input'); if(nsi){ nsi.focus(); nsi.setSelectionRange(pos,pos); } } }
+      var f2=body.querySelector('#fitFilter'); if(f2) f2.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; filter=b.getAttribute('data-f'); render(); });
       body.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ editRecord(b.getAttribute('data-edit')); }); });
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-del')); }); });
       var a=body.querySelector('#btnAdd'); if(a) a.addEventListener('click', function(){ editRecord(null); });
     }
-    if(sub==='workouts'){
+    body = pg('workouts');
+    if(body){
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-del'); App.deleteWithUndo({ apply:function(){ App.data.fitness.workouts=(App.data.fitness.workouts||[]).filter(function(x){return x.id!==id;}); }, render:render }); }); });
-      var a=body.querySelector('#btnAddW'); if(a) a.addEventListener('click', addWorkout);
+      var aw=body.querySelector('#btnAddW'); if(aw) aw.addEventListener('click', addWorkout);
     }
-    if(sub==='weights'){
+    body = pg('weights');
+    if(body){
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-del'); App.deleteWithUndo({ apply:function(){ App.data.fitness.weights=(App.data.fitness.weights||[]).filter(function(x){return x.id!==id;}); }, render:render }); }); });
-      var a=body.querySelector('#btnAddBw'); if(a) a.addEventListener('click', addWeight);
+      var ab=body.querySelector('#btnAddBw'); if(ab) ab.addEventListener('click', addWeight);
     }
   }
 

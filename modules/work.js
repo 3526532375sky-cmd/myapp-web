@@ -1,29 +1,66 @@
 ﻿/* modules/work.js —— 工作计划 */
 (function(){
 'use strict';
+var sub = 'sops';
 App.register('work', function(container){
-  var sub = 'sops';
   var q = '';
   var runningSop = null, runStart = null;
+  var SUBS = ['sops','logs','checklists'];
   function render(){
     var tabs = container.querySelector('.seg2-tabs');
+    var strip = container.querySelector('.pager-strip');
     if(!tabs){
       container.innerHTML = '<div class="seg2 seg2-tabs"><button data-sub="sops">SOP</button><button data-sub="logs">相关记录</button><button data-sub="checklists">清单</button></div>';
       tabs = container.querySelector('.seg2-tabs');
-      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
-      var bd = document.createElement('div'); bd.id = 'workBody'; tabs.after(bd);
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ switchSub(b.getAttribute('data-sub')); } });
+      var viewport = document.createElement('div'); viewport.className = 'pager-viewport';
+      strip = document.createElement('div'); strip.className = 'pager-strip';
+      strip.setAttribute('data-total', SUBS.length);
+      strip.setAttribute('data-idx', SUBS.indexOf(sub));
+      strip.style.width = (SUBS.length * 100) + '%';
+      SUBS.forEach(function(s){ var p=document.createElement('div'); p.className='pager-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
+      viewport.appendChild(strip);
+      tabs.after(viewport);
     }
     tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
-    var body = container.querySelector('#workBody');
-    body.innerHTML = (sub==='sops'||sub==='logs'?searchBox():'') + (sub==='sops'?renderSops():sub==='logs'?renderLogs():renderChecklists());
-    bind();
+    renderAllPages();
+    positionStrip(false);
+    bindAll();
+  }
+  function renderAllPages(){
+    SUBS.forEach(function(s){
+      var pg = container.querySelector('[data-page="'+s+'"]'); if(!pg) return;
+      var html = '';
+      if(s==='sops') html = searchBox() + renderSops();
+      else if(s==='logs') html = searchBox() + renderLogs();
+      else html = renderChecklists();
+      pg.innerHTML = html;
+    });
+  }
+  function positionStrip(animate){
+    var strip = container.querySelector('.pager-strip'); if(!strip) return;
+    var total = parseInt(strip.getAttribute('data-total') || '1', 10);
+    var idx = SUBS.indexOf(sub); if(idx<0) idx=0;
+    strip.setAttribute('data-idx', idx);
+    strip.style.transition = animate ? 'transform .18s cubic-bezier(.22,.61,.36,1)' : 'none';
+    strip.style.transform = 'translateX(' + (-idx*(100/total)) + '%)';
+  }
+  function switchSub(s){
+    sub = s;
+    container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    positionStrip(true);
   }
 
   function searchBox(){ return '<div class="row" style="margin-bottom:8px"><input class="input search-input" placeholder="搜索当前列表" value="'+App.esc(q)+'"></div>'; }
-  function bind(){
-    var body = container.querySelector('#workBody');
-    var si=body.querySelector('.search-input'); if(si){ var composing=false; si.addEventListener('compositionstart', function(){ composing=true; }); si.addEventListener('compositionend', function(){ composing=false; setTimeout(applySearch,0); }); si.addEventListener('input', function(){ if(composing) return; applySearch(); }); function applySearch(){ q=si.value; var pos=si.selectionStart; render(); var nsi=container.querySelector('.search-input'); if(nsi){ nsi.focus(); nsi.setSelectionRange(pos,pos); } } }
-    if(sub==='sops'){
+  function bindAll(){
+    var pg = function(s){ return container.querySelector('[data-page="'+s+'"]'); };
+    ['sops','logs'].forEach(function(s){
+      var body = pg(s); if(!body) return;
+      var si = body.querySelector('.search-input');
+      if(si){ var composing=false; si.addEventListener('compositionstart', function(){ composing=true; }); si.addEventListener('compositionend', function(){ composing=false; setTimeout(applySearch,0); }); si.addEventListener('input', function(){ if(composing) return; applySearch(); }); function applySearch(){ q=si.value; var pos=si.selectionStart; render(); var nsi=container.querySelector('[data-page="'+s+'"] .search-input'); if(nsi){ nsi.focus(); nsi.setSelectionRange(pos,pos); } } }
+    });
+    var body = pg('sops');
+    if(body){
       body.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ editSop(b.getAttribute('data-edit')); }); });
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delSop(b.getAttribute('data-del')); }); });
       body.querySelectorAll('[data-run]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-run'); var sop=(App.data.work.sops||[]).find(function(x){return x.id===id;}); if(sop){ runningSop=sop; runStart=Date.now(); render(); } }); });
@@ -31,12 +68,14 @@ App.register('work', function(container){
       var cb=body.querySelector('#btnCancelRun'); if(cb) cb.addEventListener('click', function(){ runningSop=null; runStart=null; render(); });
       var a=body.querySelector('#btnAddSop'); if(a) a.addEventListener('click', function(){ editSop(null); });
     }
-    if(sub==='logs'){
+    body = pg('logs');
+    if(body){
       body.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ editLog(b.getAttribute('data-edit')); }); });
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delLog(b.getAttribute('data-del')); }); });
       var a=body.querySelector('#btnAddLog'); if(a) a.addEventListener('click', function(){ editLog(null); });
     }
-    if(sub==='checklists'){
+    body = pg('checklists');
+    if(body){
       body.querySelectorAll('[data-ck]').forEach(function(b){ b.addEventListener('click', function(){ toggleItem(b.getAttribute('data-ck'), b.getAttribute('data-i')); }); });
       body.querySelectorAll('[data-item-del]').forEach(function(b){ b.addEventListener('click', function(){ delItem(b.getAttribute('data-item-del'), b.getAttribute('data-i')); }); });
       body.querySelectorAll('[data-add-item]').forEach(function(b){ b.addEventListener('click', function(){ addItem(b.getAttribute('data-add-item')); }); });
