@@ -67,44 +67,40 @@ App.register('ledger', function(container){
     var strip = container.querySelector('.ledger-strip'); if(!strip) return;
     var idx = PAGES.indexOf(sub); if(idx<0) idx=0;
     strip.style.transition = animate ? 'transform .3s cubic-bezier(.22,.61,.36,1)' : 'none';
-    var w = container.offsetWidth || window.innerWidth;
-  strip.style.transform = 'translateX(' + (-idx*w) + 'px)';
+    strip.style.transform = 'translateX(' + (-idx*20) + '%)';
   }
   function switchSub(s){
     sub = s;
     container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
     positionStrip(true);
   }
-  // 横向传送带滑动翻页（跟手 + 边缘阻尼 + 速度判断 + 松手翻页/回弹）
-  var dgX = null, dgY = null, dgIdx = -1, dgH = null, dgW = 0, dgLx = null, dgLt = null, dgVx = 0;
+  // 横向传送带滑动翻页（小说式：百分比跟手 + 松手翻页/回弹）
+  var dgX = null, dgY = null, dgIdx = -1, dgH = null;
   container.addEventListener('touchstart', function(e){
     if(!container.querySelector('.ledger-strip')) return;
     dgX = e.touches[0].clientX; dgY = e.touches[0].clientY;
     dgIdx = PAGES.indexOf(sub); if(dgIdx<0) dgIdx=0;
-    dgW = container.offsetWidth || window.innerWidth;
-    dgH = null; dgLx = e.touches[0].clientX; dgLt = Date.now(); dgVx = 0;
+    dgH = null;
   }, {passive:true});
   container.addEventListener('touchmove', function(e){
     if(dgX == null) return;
     var dx = e.touches[0].clientX - dgX, dy = e.touches[0].clientY - dgY;
     if(dgH == null){ if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)) dgH = true; else if(Math.abs(dy)>10) dgH = false; }
     if(dgH !== true) return;
-    var now = Date.now(), dt = now - dgLt; if(dt>0) dgVx = (e.touches[0].clientX - dgLx)/dt;
-    dgLx = e.touches[0].clientX; dgLt = now;
     var strip = container.querySelector('.ledger-strip'); if(!strip) return;
     var off = dx;
     if(dgIdx === 0 && dx > 0) off = dx * 0.35;
     if(dgIdx === PAGES.length-1 && dx < 0) off = dx * 0.35;
     strip.style.transition = 'none';
-    strip.style.transform = 'translateX(' + (-dgIdx*dgW + off) + 'px)';
+    strip.style.transform = 'translateX(calc(' + (-dgIdx*20) + '% + ' + off + 'px))';
   }, {passive:true});
   container.addEventListener('touchend', function(e){
     if(dgX == null) return;
     if(dgH === true){
       var dx = e.changedTouches[0].clientX - dgX;
-      var shouldFlip = Math.abs(dx) > dgW*0.25 || Math.abs(dgVx) > 0.5;
+      var w = container.offsetWidth || window.innerWidth;
       var next = (dx < 0) ? (dgIdx+1) : (dgIdx-1);
-      if(shouldFlip && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
+      if(Math.abs(dx) > w/3 && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
       else { positionStrip(true); }
     }
     dgX = null; dgY = null; dgH = null; dgIdx = -1;
