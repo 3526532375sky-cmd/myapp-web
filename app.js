@@ -340,11 +340,11 @@ function init(){
   document.addEventListener('touchstart', function(e){ var t=e.touches[0]; touchX=t.clientX; backArmed=(t.clientX > window.innerWidth - 40); }, {passive:true});
   document.addEventListener('touchmove', function(e){ if(!backArmed) return; var t=e.touches[0]; if(t.clientX < touchX - 70){ backArmed=false; goBack(); } }, {passive:true});
   // 子页签(.seg2-tabs)水平滑动切换：跟手位移 + 阻尼 + 松手翻页/回弹
-  var segX = null, segBody = null;
+  var segX = null, segBody = null, segEl = null;
   document.addEventListener('touchstart', function(e){
     var seg = e.target.closest ? e.target.closest('.seg2-tabs') : null;
-    if(seg){ segX = e.touches[0].clientX; segBody = seg.nextElementSibling; }
-    else { segX = null; segBody = null; }
+    if(seg){ segX = e.touches[0].clientX; segBody = seg.nextElementSibling; segEl = seg; }
+    else { segX = null; segBody = null; segEl = null; }
   }, {passive:true});
   document.addEventListener('touchmove', function(e){
     if(segX == null || !segBody) return;
@@ -355,16 +355,15 @@ function init(){
   document.addEventListener('touchend', function(e){
     if(segX == null) return;
     var dx = e.changedTouches[0].clientX - segX;
-    var seg = e.target.closest ? e.target.closest('.seg2-tabs') : null;
     if(segBody){ segBody.style.transition = 'transform .2s ease'; segBody.style.transform = ''; }
-    if(Math.abs(dx) > 80 && seg){
-      var btns = seg.querySelectorAll('button[data-sub]');
-      var cur = seg.querySelector('button.on');
+    if(Math.abs(dx) > 50 && segEl){
+      var btns = segEl.querySelectorAll('button[data-sub]');
+      var cur = segEl.querySelector('button.on');
       var idx = cur ? Array.prototype.indexOf.call(btns, cur) : -1;
       var next = (dx < 0) ? (idx+1) : (idx-1);
       if(next >= 0 && next < btns.length){ btns[next].click(); }
     }
-    segX = null; segBody = null;
+    segX = null; segBody = null; segEl = null;
   }, {passive:true});
 }
 init();

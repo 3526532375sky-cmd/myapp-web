@@ -489,7 +489,7 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
 .gb-row{display:flex;gap:16px;}
 .gb-half{flex:1;min-width:0;}
 .gb-half .sum-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;}
-.prog-track.thick{height:14px;}
+.prog-track.thick{height:18px;}
 
 /* 收支分析行 */
 .an-row{display:flex;align-items:baseline;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
