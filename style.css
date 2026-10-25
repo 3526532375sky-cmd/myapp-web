@@ -447,3 +447,7 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 /* ===== 周视图连续翻页容器 ===== */
 .wv-viewport{position:relative;overflow:hidden;height:340px;}
 .wv-panel{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+/* 本周安排排版：不挤两行 */
+.week-row .wf{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;}
+.week-row .wt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px;}

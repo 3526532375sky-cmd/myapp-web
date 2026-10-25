@@ -55,7 +55,11 @@ App.register('today', function(container){
     if(ri){ ri.addEventListener('keydown', function(e){ if(e.key==='Enter'){ var v=ri.value.trim(); if(!v){ App.toast('请输入复盘内容'); return; } App.data.todayReviews = App.data.todayReviews || []; App.data.todayReviews.push({id:'tr'+Date.now(), date:App.Logic.todayStr(), content:v, ts:Date.now()}); App.setData(App.data); render(); App.toast('复盘已保存'); } }); }
     var inp = container.querySelector('#todayInput');
     if(inp){
+      var composing = false;
+      inp.addEventListener('compositionstart', function(){ composing = true; });
+      inp.addEventListener('compositionend', function(){ composing = false; });
       inp.addEventListener('keydown', function(e){
+        if(e.key==='Enter' && composing) return;
         if(e.key==='Enter'){
           var v = inp.value.trim();
           if(!v){ App.toast('请输入内容'); return; }

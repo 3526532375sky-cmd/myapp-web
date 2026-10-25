@@ -68,15 +68,8 @@ function renderWeekView(){
     var dt=L.fitnessWeekDate(dow, WV.anchor);
     return '<button class="wv-tab'+(dt===WV.page?' on':'')+'" data-wv-date="'+dt+'">'+LABELS[dow]+'</button>';
   }).join('');
-  function shift(days){ var d=new Date(WV.page+'T00:00:00'); d.setDate(d.getDate()+days); return fmtDate(d); }
   var v=L.fitnessPlanVersion(App.data.fitness.plan, WV.page);
-  var html='<div class="wv-nav">'+tabs+'</div>'+
-    '<div class="wv-viewport" id="wvViewport">'+
-      '<div class="wv-panel">'+wvDayContent(shift(-1))+'</div>'+
-      '<div class="wv-panel">'+wvDayContent(WV.page)+'</div>'+
-      '<div class="wv-panel">'+wvDayContent(shift(1))+'</div>'+
-    '</div>'+
-    '<div class="wv-ctrl"><button class="mbtn ghost" id="wvPrev">↑ 上一天</button><button class="mbtn ghost" id="wvNext">下一天 ↓</button></div>';
+  var html='<div class="wv-nav">'+tabs+'</div><div class="wv-body" id="wvBody">'+wvDayContent(WV.page)+'</div><div class="wv-ctrl"><button class="mbtn ghost" id="wvPrev">↑ 上一天</button><button class="mbtn ghost" id="wvNext">下一天 ↓</button></div>';
   App.openModal(html, { title:'本周训练 · '+(v&&v.name?v.name:''), saveText:'完成', onSave:function(close){ WV.active=false; close(); } });
   bindWeekView();
 }
@@ -86,20 +79,15 @@ function bindWeekView(){
   var pv=box.querySelector('#wvPrev'); if(pv) pv.addEventListener('click', function(){ weekNav(-1); });
   var nx=box.querySelector('#wvNext'); if(nx) nx.addEventListener('click', function(){ weekNav(1); });
   box.querySelectorAll('[data-wv-check]').forEach(function(cb){ cb.addEventListener('change', function(){ var day=App.Logic.fitnessDayFor(App.data.fitness.plan, WV.page); if(day) wvToggle(day, WV.page, parseInt(cb.getAttribute('data-wv-check'),10)); renderWeekView(); }); });
-  var vp=box.querySelector('#wvViewport'); if(!vp) return;
-  var startY=null, dragging=false, offset=0, base=0;
-  setTimeout(function(){ base=-vp.clientHeight; vp.style.transition='none'; vp.style.transform='translateY('+base+'px)'; }, 30);
-  vp.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; dragging=true; }, {passive:true});
-  vp.addEventListener('touchmove', function(e){
-    if(!dragging||startY==null) return;
-    var dy=e.touches[0].clientY-startY;
-    var panel=vp.children[1]; var canDown=panel.scrollTop+panel.clientHeight<panel.scrollHeight-1; var canUp=panel.scrollTop>1;
-    if((dy<0&&canDown)||(dy>0&&canUp)){ return; }
-    e.preventDefault(); offset=dy*0.35; vp.style.transition='none'; vp.style.transform='translateY('+(base+offset)+'px)';
-  }, {passive:false});
-  vp.addEventListener('touchend', function(e){
-    if(!dragging) return; dragging=false; var th=vp.clientHeight*0.25;
-    if(offset<-th){ weekNav(1); } else if(offset>th){ weekNav(-1); } else { offset=0; vp.style.transition='transform .2s ease'; vp.style.transform='translateY('+base+'px)'; setTimeout(function(){ vp.style.transition=''; },200); }
+  var body=box.querySelector('#wvBody'); if(!body) return;
+  var startY=null;
+  body.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; }, {passive:true});
+  body.addEventListener('touchend', function(e){
+    if(startY==null) return;
+    var dy=e.changedTouches[0].clientY-startY;
+    var atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 2;
+    var atTop = body.scrollTop <= 2;
+    if(atBottom && dy < -60){ weekNav(1); } else if(atTop && dy > 60){ weekNav(-1); }
     startY=null;
   }, {passive:true});
 }
@@ -157,6 +145,7 @@ App.register('fitness', function(container){
   function onPlanClick(e){
     if(sub!=='plan') return;
     var t=e.target;
+    if(t.closest && t.closest('[data-open-today]')){ showWeek(App.Logic.todayStr()); return; }
     var cell = t.closest ? t.closest('.cal-cell') : null;
     if(cell){
       selDate = cell.getAttribute('data-date') || null;
@@ -217,7 +206,7 @@ App.register('fitness', function(container){
     var anchor=selDate||today;
     var html='';
     // 今日大卡（始终显示今天）
-    html+='<div class="card today-hero" style="border:1px solid var(--accent,#3b82f6)">';
+    html+='<div class="card today-hero" data-open-today style="border:1px solid var(--accent,#3b82f6)">';
     html+='<div class="td-dow">周'+WK[dow]+' · '+App.esc(day?day.label:'')+'</div>';
     html+='<div class="td-focus">'+App.esc(day?day.focus:'休息')+'</div>';
     if(day){ html+='<div class="td-tag">'+App.esc(day.tag||'')+'</div>'; }
