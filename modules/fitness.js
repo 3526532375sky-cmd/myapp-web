@@ -47,25 +47,36 @@ function weekNav(delta){
   if(next<mon) next=sun; else if(next>sun) next=mon;
   WV.page=next; renderWeekView();
 }
+function wvDayContent(dt){
+  var L=App.Logic;
+  var day=L.fitnessDayFor(App.data.fitness.plan, dt);
+  var dow=new Date(dt+'T00:00:00').getDay();
+  var content='';
+  if(day){
+    content='<div class="wv-head">'+LABELS[dow]+' · '+App.esc(day.focus)+(day.tag?' · '+App.esc(day.tag):'')+'</div>';
+    if(day.kind==='strength'){
+      var prog=L.fitnessDayProgress(App.data.fitness.workouts, dt, day);
+      content+='<div class="sum-line">完成 '+prog.done+'/'+prog.total+'</div>';
+      if(dt<=L.todayStr()){ content+=wvCheck(day, prog); } else { content+=wvItems(day); }
+    } else { content+=wvItems(day); }
+  } else { content='<div class="placeholder">休息日 · 无安排</div>'; }
+  return content;
+}
 function renderWeekView(){
   var L=App.Logic;
   var tabs=[1,2,3,4,5,6,0].map(function(dow){
     var dt=L.fitnessWeekDate(dow, WV.anchor);
     return '<button class="wv-tab'+(dt===WV.page?' on':'')+'" data-wv-date="'+dt+'">'+LABELS[dow]+'</button>';
   }).join('');
-  var day=L.fitnessDayFor(App.data.fitness.plan, WV.page);
-  var pageDow=new Date(WV.page+'T00:00:00').getDay();
-  var content='';
-  if(day){
-    content='<div class="wv-head">'+LABELS[pageDow]+' · '+App.esc(day.focus)+(day.tag?' · '+App.esc(day.tag):'')+'</div>';
-    if(day.kind==='strength'){
-      var prog=L.fitnessDayProgress(App.data.fitness.workouts, WV.page, day);
-      content+='<div class="sum-line">完成 '+prog.done+'/'+prog.total+'</div>';
-      if(WV.page<=L.todayStr()){ content+=wvCheck(day, prog); } else { content+=wvItems(day); }
-    } else { content+=wvItems(day); }
-  } else { content='<div class="placeholder">休息日 · 无安排</div>'; }
+  function shift(days){ var d=new Date(WV.page+'T00:00:00'); d.setDate(d.getDate()+days); return fmtDate(d); }
   var v=L.fitnessPlanVersion(App.data.fitness.plan, WV.page);
-  var html='<div class="wv-nav">'+tabs+'</div><div class="wv-body wv-page" id="wvBody">'+content+'</div><div class="wv-ctrl"><button class="mbtn ghost" id="wvPrev">↑ 上一天</button><button class="mbtn ghost" id="wvNext">下一天 ↓</button></div>';
+  var html='<div class="wv-nav">'+tabs+'</div>'+
+    '<div class="wv-viewport" id="wvViewport">'+
+      '<div class="wv-panel">'+wvDayContent(shift(-1))+'</div>'+
+      '<div class="wv-panel">'+wvDayContent(WV.page)+'</div>'+
+      '<div class="wv-panel">'+wvDayContent(shift(1))+'</div>'+
+    '</div>'+
+    '<div class="wv-ctrl"><button class="mbtn ghost" id="wvPrev">↑ 上一天</button><button class="mbtn ghost" id="wvNext">下一天 ↓</button></div>';
   App.openModal(html, { title:'本周训练 · '+(v&&v.name?v.name:''), saveText:'完成', onSave:function(close){ WV.active=false; close(); } });
   bindWeekView();
 }
@@ -75,11 +86,22 @@ function bindWeekView(){
   var pv=box.querySelector('#wvPrev'); if(pv) pv.addEventListener('click', function(){ weekNav(-1); });
   var nx=box.querySelector('#wvNext'); if(nx) nx.addEventListener('click', function(){ weekNav(1); });
   box.querySelectorAll('[data-wv-check]').forEach(function(cb){ cb.addEventListener('change', function(){ var day=App.Logic.fitnessDayFor(App.data.fitness.plan, WV.page); if(day) wvToggle(day, WV.page, parseInt(cb.getAttribute('data-wv-check'),10)); renderWeekView(); }); });
-  var bodyEl=box.querySelector('.modal-body')||box;
-  bodyEl.onwheel=function(e){ if(e.deltaY===0) return; weekNav(e.deltaY>0?1:-1); };
-  var ty=null;
-  bodyEl.ontouchstart=function(e){ ty=e.touches[0].clientY; };
-  bodyEl.ontouchend=function(e){ if(ty==null) return; var dy=e.changedTouches[0].clientY-ty; if(Math.abs(dy)>40) weekNav(dy<0?1:-1); ty=null; };
+  var vp=box.querySelector('#wvViewport'); if(!vp) return;
+  var startY=null, dragging=false, offset=0, base=-vp.clientHeight;
+  vp.style.transition='none'; vp.style.transform='translateY('+base+'px)';
+  vp.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; dragging=true; }, {passive:true});
+  vp.addEventListener('touchmove', function(e){
+    if(!dragging||startY==null) return;
+    var dy=e.touches[0].clientY-startY;
+    var panel=vp.children[1]; var canDown=panel.scrollTop+panel.clientHeight<panel.scrollHeight-1; var canUp=panel.scrollTop>1;
+    if((dy<0&&canDown)||(dy>0&&canUp)){ return; }
+    e.preventDefault(); offset=dy*0.35; vp.style.transition='none'; vp.style.transform='translateY('+(base+offset)+'px)';
+  }, {passive:false});
+  vp.addEventListener('touchend', function(e){
+    if(!dragging) return; dragging=false; var th=vp.clientHeight*0.25;
+    if(offset<-th){ weekNav(1); } else if(offset>th){ weekNav(-1); } else { offset=0; vp.style.transition='transform .2s ease'; vp.style.transform='translateY('+base+'px)'; setTimeout(function(){ vp.style.transition=''; },200); }
+    startY=null;
+  }, {passive:true});
 }
 function showWeek(date){ WV.anchor=date||App.Logic.todayStr(); WV.page=WV.anchor; WV.active=true; renderWeekView(); }
 document.addEventListener('keydown', function(e){

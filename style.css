@@ -435,3 +435,15 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .view-head{display:flex;align-items:center;gap:8px;}
 .view-head h1{margin:0;}
 .back-btn{display:inline-block;border:none;background:none;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;padding:6px 8px;flex:none;}
+
+/* ===== token 显示/隐藏 + 手机端 FAB 位置 ===== */
+.pwdwrap{position:relative;display:flex;align-items:center;}
+.pwdwrap .input{flex:1;padding-right:44px;}
+.pwdwrap .eye{position:absolute;right:6px;border:none;background:none;font-size:16px;cursor:pointer;padding:6px;min-width:32px;}
+@media (max-width:768px){
+  .fab{bottom:calc(56px + env(safe-area-inset-bottom) + 16px);right:16px;}
+}
+
+/* ===== 周视图连续翻页容器 ===== */
+.wv-viewport{position:relative;overflow:hidden;height:340px;}
+.wv-panel{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}

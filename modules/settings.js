@@ -14,7 +14,7 @@ App.register('settings', function(container){
       '<div class="sum-line" id="syncStatus"></div>'+
       '<div class="field"><label>GitHub 用户名（owner）</label><input class="input" id="syncOwner" placeholder="如 zhangsan" autocomplete="off"></div>'+
       '<div class="field"><label>仓库名（repo）</label><input class="input" id="syncRepo" placeholder="myapp-data" autocomplete="off"></div>'+
-      '<div class="field"><label>Fine-grained token（github_pat_ 开头）</label><input class="input" id="syncToken" type="password" placeholder="已保存（留空则不变）" autocomplete="off"></div>'+
+      '<div class="field"><label>Fine-grained token（github_pat_ 开头，可粘贴）</label><div class="pwdwrap"><input class="input" id="syncToken" type="text" placeholder="已保存（留空则不变）" autocomplete="off" autocapitalize="off" spellcheck="false"><button type="button" class="eye" id="syncTokenEye" title="显示/隐藏">👁</button></div></div>'+
       '<div class="field"><label>到期日</label><input class="input" id="syncExpires" type="date"></div>'+
       '<div class="row" style="margin-top:10px"><button class="mbtn ghost" id="btnSyncTest">测试连接</button><button class="mbtn primary" id="btnSyncSave">保存</button></div>'+
     '</div>'+
@@ -30,6 +30,7 @@ App.register('settings', function(container){
     if(!info||!info.configured){ st.textContent='未配置同步。'; } else if(info.expired){ st.textContent='⚠️ 令牌已过期，请重新生成。'; } else if(info.permanent){ st.textContent='✅ 已配置（永不过期）。'; } else { st.textContent='✅ 已配置，剩余 '+info.days+' 天到期'+(info.days<=5?'（即将到期，请续期）':''); }
   }
   function bind(){
+    var eye=container.querySelector('#syncTokenEye'); if(eye) eye.addEventListener('click', function(){ var inp=container.querySelector('#syncToken'); inp.type=(inp.type==='password')?'text':'password'; eye.textContent=(inp.type==='password')?'🙈':'👁'; });
     fillSync();
     var bt=container.querySelector('#btnSyncTest'); if(bt) bt.addEventListener('click', function(){
       var owner=container.querySelector('#syncOwner').value.trim(), repo=container.querySelector('#syncRepo').value.trim(), token=container.querySelector('#syncToken').value.trim();
