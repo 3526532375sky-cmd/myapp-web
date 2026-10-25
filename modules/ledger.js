@@ -20,33 +20,39 @@ App.register('ledger', function(container){
 
   function render(){
     var ms = monthSum();
-    var html = '';
+    var tabs = container.querySelector('.seg2-tabs');
+    if(!tabs){
+      container.innerHTML = '<div class="seg2 seg2-tabs">'+
+        '<button data-sub="flow" class="on">流水</button>'+
+        '<button data-sub="stats">统计</button>'+
+        '<button data-sub="year">年度</button>'+
+        '<button data-sub="fin">金融</button>'+
+        '<button data-sub="cfg">设置</button>'+
+        '</div>';
+      tabs = container.querySelector('.seg2-tabs');
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
+      var hd = document.createElement('div'); hd.className = 'ledger-head'; tabs.before(hd);
+      var bd = document.createElement('div'); bd.id = 'ledgerBody'; tabs.after(bd);
+    }
+    tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    var head = container.querySelector('.ledger-head');
+    head.innerHTML = '';
     if(sub==='flow'){
-      html += '<div class="stat3">'+
+      head.innerHTML = '<div class="stat3">'+
         '<div class="stat-item"><div class="sl">本月支出</div><div class="sv exp">'+L.fmtMoney(ms.expense)+'</div></div>'+
         '<div class="stat-item"><div class="sl">本月收入</div><div class="sv inc">'+L.fmtMoney(ms.income)+'</div></div>'+
         '<div class="stat-item"><div class="sl">本月结余</div><div class="sv '+(ms.balance<0?'exp':'inc')+'">'+L.fmtMoney(ms.balance)+'</div></div>'+
-        '</div>';
-      html += goalBudgetHtml(ms);
+        '</div>' + goalBudgetHtml(ms);
     }
-    html += '<div class="seg2 seg2-tabs">'+
-      '<button data-sub="flow" class="'+(sub==='flow'?'on':'')+'">流水</button>'+
-      '<button data-sub="stats" class="'+(sub==='stats'?'on':'')+'">统计</button>'+
-      '<button data-sub="year" class="'+(sub==='year'?'on':'')+'">年度</button>'+
-      '<button data-sub="fin" class="'+(sub==='fin'?'on':'')+'">金融</button>'+
-      '<button data-sub="cfg" class="'+(sub==='cfg'?'on':'')+'">设置</button>'+
-      '</div>';
-    html += '<div id="ledgerBody">';
-    if(sub==='flow') html += renderFlow();
-    else if(sub==='stats') html += renderStats();
-    else if(sub==='year') html += renderYear();
-    else if(sub==='fin') html += renderFin();
-    else html += renderCfg();
-    html += '</div>';
-    container.innerHTML = html;
-    container.querySelectorAll('[data-sub]').forEach(function(b){ b.addEventListener('click', function(){ sub=b.getAttribute('data-sub'); render(); }); });
+    var body = container.querySelector('#ledgerBody');
+    if(sub==='flow') body.innerHTML = renderFlow();
+    else if(sub==='stats') body.innerHTML = renderStats();
+    else if(sub==='year') body.innerHTML = renderYear();
+    else if(sub==='fin') body.innerHTML = renderFin();
+    else body.innerHTML = renderCfg();
     bindBody();
   }
+
 
   function goalBudgetHtml(ms){
     var s = App.data.ledger.settings || {};

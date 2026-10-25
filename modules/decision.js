@@ -5,11 +5,19 @@ App.register('decision', function(container){
   var sub='entries', filter='all';
   var q='';
   function render(){
-    var html='<div class="seg2 seg2-tabs"><button data-sub="entries" class="'+(sub==='entries'?'on':'')+'">决策</button><button data-sub="manuals" class="'+(sub==='manuals'?'on':'')+'">手册</button></div><div id="decBody">'+searchBox()+renderBody()+'</div>';
-    container.innerHTML=html;
-    container.querySelectorAll('[data-sub]').forEach(function(b){ b.addEventListener('click', function(){ sub=b.getAttribute('data-sub'); render(); }); });
+    var tabs = container.querySelector('.seg2-tabs');
+    if(!tabs){
+      container.innerHTML = '<div class="seg2 seg2-tabs"><button data-sub="entries">决策</button><button data-sub="manuals">手册</button></div>';
+      tabs = container.querySelector('.seg2-tabs');
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
+      var bd = document.createElement('div'); bd.id = 'decBody'; tabs.after(bd);
+    }
+    tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    var body = container.querySelector('#decBody');
+    body.innerHTML = searchBox() + renderBody();
     bind();
   }
+
   function searchBox(){ return '<div class="row" style="margin-bottom:8px"><input class="input search-input" placeholder="搜索当前列表" value="'+App.esc(q)+'"></div>'; }
   function bind(){
     var body=container.querySelector('#decBody');

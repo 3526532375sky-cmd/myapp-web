@@ -114,11 +114,19 @@ App.register('fitness', function(container){
   container.addEventListener('keydown', onPlanKey);
 
   function render(){
-    var html = '<div class="seg2 seg2-tabs"><button data-sub="plan" class="'+(sub==='plan'?'on':'')+'">计划</button><button data-sub="records" class="'+(sub==='records'?'on':'')+'">动作库</button><button data-sub="workouts" class="'+(sub==='workouts'?'on':'')+'">训练记录</button><button data-sub="weights" class="'+(sub==='weights'?'on':'')+'">体重</button></div><div id="fitBody">'+(sub==='records'?searchBox():'')+renderBody()+'</div>';
-    container.innerHTML = html;
-    container.querySelectorAll('[data-sub]').forEach(function(b){ b.addEventListener('click', function(){ sub=b.getAttribute('data-sub'); render(); }); });
+    var tabs = container.querySelector('.seg2-tabs');
+    if(!tabs){
+      container.innerHTML = '<div class="seg2 seg2-tabs"><button data-sub="plan">计划</button><button data-sub="records">动作库</button><button data-sub="workouts">训练记录</button><button data-sub="weights">体重</button></div>';
+      tabs = container.querySelector('.seg2-tabs');
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
+      var bd = document.createElement('div'); bd.id = 'fitBody'; tabs.after(bd);
+    }
+    tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    var body = container.querySelector('#fitBody');
+    body.innerHTML = (sub==='records'?searchBox():'') + renderBody();
     bind();
   }
+
 
   function searchBox(){ return '<div class="row" style="margin-bottom:8px"><input class="input search-input" placeholder="搜索动作（名称/要点/来源）" value="'+App.esc(q)+'"></div>'; }
 

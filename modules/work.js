@@ -6,15 +6,19 @@ App.register('work', function(container){
   var q = '';
   var runningSop = null, runStart = null;
   function render(){
-    var html = '<div class="seg2 seg2-tabs">'+
-      '<button data-sub="sops" class="'+(sub==='sops'?'on':'')+'">SOP</button>'+
-      '<button data-sub="logs" class="'+(sub==='logs'?'on':'')+'">相关记录</button>'+
-      '<button data-sub="checklists" class="'+(sub==='checklists'?'on':'')+'">清单</button>'+
-      '</div><div id="workBody">'+(sub==='sops'||sub==='logs'?searchBox():'')+(sub==='sops'?renderSops():sub==='logs'?renderLogs():renderChecklists())+'</div>';
-    container.innerHTML = html;
-    container.querySelectorAll('[data-sub]').forEach(function(b){ b.addEventListener('click', function(){ sub=b.getAttribute('data-sub'); render(); }); });
+    var tabs = container.querySelector('.seg2-tabs');
+    if(!tabs){
+      container.innerHTML = '<div class="seg2 seg2-tabs"><button data-sub="sops">SOP</button><button data-sub="logs">相关记录</button><button data-sub="checklists">清单</button></div>';
+      tabs = container.querySelector('.seg2-tabs');
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
+      var bd = document.createElement('div'); bd.id = 'workBody'; tabs.after(bd);
+    }
+    tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    var body = container.querySelector('#workBody');
+    body.innerHTML = (sub==='sops'||sub==='logs'?searchBox():'') + (sub==='sops'?renderSops():sub==='logs'?renderLogs():renderChecklists());
     bind();
   }
+
   function searchBox(){ return '<div class="row" style="margin-bottom:8px"><input class="input search-input" placeholder="搜索当前列表" value="'+App.esc(q)+'"></div>'; }
   function bind(){
     var body = container.querySelector('#workBody');

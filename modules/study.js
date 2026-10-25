@@ -7,12 +7,20 @@ App.register('study', function(container){
   var reviewing = false, revQueue = [], revIdx = 0, revFlipped = false;
   
   function render(){
-    var tabs = [['goals','计划'],['notes','笔记'],['resources','资料'],['cards','闪卡'],['reviews','复盘']];
-    var html = '<div class="seg2 seg2-tabs">'+tabs.map(function(t){ return '<button data-sub="'+t[0]+'" class="'+(sub===t[0]?'on':'')+'">'+t[1]+'</button>'; }).join('')+'</div><div id="studyBody">'+renderBody()+'</div>';
-    container.innerHTML = html;
-    container.querySelectorAll('[data-sub]').forEach(function(b){ b.addEventListener('click', function(){ sub=b.getAttribute('data-sub'); reviewing=false; revFlipped=false; render(); }); });
+    var tabs = container.querySelector('.seg2-tabs');
+    if(!tabs){
+      var arr = [['goals','计划'],['notes','笔记'],['resources','资料'],['cards','闪卡'],['reviews','复盘']];
+      container.innerHTML = '<div class="seg2 seg2-tabs">'+arr.map(function(t){ return '<button data-sub="'+t[0]+'">'+t[1]+'</button>'; }).join('')+'</div>';
+      tabs = container.querySelector('.seg2-tabs');
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); reviewing=false; revFlipped=false; render(); } });
+      var bd = document.createElement('div'); bd.id = 'studyBody'; tabs.after(bd);
+    }
+    tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    var body = container.querySelector('#studyBody');
+    body.innerHTML = renderBody();
     bind();
   }
+
   function bind(){
     var body = container.querySelector('#studyBody');
     if(sub==='goals'){
