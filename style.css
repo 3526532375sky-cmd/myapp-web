@@ -476,3 +476,11 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
 .slide-in{animation:slideIn .22s ease;}
 @keyframes slideIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){ .slide-in{animation:none;} }
+
+/* ===== 窄屏排版兜底：宽表格横向滚动，不撑破页面 ===== */
+@media (max-width:768px){
+  .mt-table{overflow-x:auto;overflow-y:hidden;}
+  .mt-row{min-width:340px;}
+  .trend{overflow-x:auto;}
+  .donut-wrap{justify-content:center;}
+}

@@ -20,12 +20,15 @@ App.register('ledger', function(container){
 
   function render(){
     var ms = monthSum();
-    var html = '<div class="stat3">'+
-      '<div class="stat-item"><div class="sl">本月支出</div><div class="sv exp">'+L.fmtMoney(ms.expense)+'</div></div>'+
-      '<div class="stat-item"><div class="sl">本月收入</div><div class="sv inc">'+L.fmtMoney(ms.income)+'</div></div>'+
-      '<div class="stat-item"><div class="sl">本月结余</div><div class="sv '+(ms.balance<0?'exp':'inc')+'">'+L.fmtMoney(ms.balance)+'</div></div>'+
-      '</div>';
-    html += goalBudgetHtml(ms);
+    var html = '';
+    if(sub==='flow'){
+      html += '<div class="stat3">'+
+        '<div class="stat-item"><div class="sl">本月支出</div><div class="sv exp">'+L.fmtMoney(ms.expense)+'</div></div>'+
+        '<div class="stat-item"><div class="sl">本月收入</div><div class="sv inc">'+L.fmtMoney(ms.income)+'</div></div>'+
+        '<div class="stat-item"><div class="sl">本月结余</div><div class="sv '+(ms.balance<0?'exp':'inc')+'">'+L.fmtMoney(ms.balance)+'</div></div>'+
+        '</div>';
+      html += goalBudgetHtml(ms);
+    }
     html += '<div class="seg2 seg2-tabs">'+
       '<button data-sub="flow" class="'+(sub==='flow'?'on':'')+'">流水</button>'+
       '<button data-sub="stats" class="'+(sub==='stats'?'on':'')+'">统计</button>'+
