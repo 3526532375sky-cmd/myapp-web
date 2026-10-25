@@ -441,7 +441,7 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .pwdwrap .input{flex:1;padding-right:44px;}
 .pwdwrap .eye{position:absolute;right:6px;border:none;background:none;font-size:16px;cursor:pointer;padding:6px;min-width:32px;}
 @media (max-width:768px){
-  .fab{bottom:calc(56px + env(safe-area-inset-bottom) + 16px);right:16px;}
+  .fab{bottom:calc(112px + env(safe-area-inset-bottom) + 16px);right:16px;}
 }
 
 /* ===== 周视图连续翻页容器 ===== */
