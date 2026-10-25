@@ -344,7 +344,7 @@ function init(){
   document.addEventListener('touchstart', function(e){
     var inContent = e.target.closest ? e.target.closest('.content') : null;
     var seg = document.querySelector('.seg2-tabs');
-    if(inContent && seg){ swX = e.touches[0].clientX; swY = e.touches[0].clientY; swSeg = seg; swBody = document.querySelector('#module-body') || inContent; swH = null; }
+    if(inContent && seg){ swX = e.touches[0].clientX; swY = e.touches[0].clientY; swSeg = seg; swBody = seg.nextElementSibling || inContent; swH = null; }
     else { swX = null; swY = null; swSeg = null; swBody = null; swH = null; }
   }, {passive:true});
   document.addEventListener('touchmove', function(e){
