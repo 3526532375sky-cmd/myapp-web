@@ -449,4 +449,4 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
 /* 账本横向传送带翻页 */
 .ledger-viewport{overflow:hidden;}
 .ledger-strip{display:flex;width:500%;transform:translateX(0);will-change:transform;}
-.ledger-page{flex:none;width:20%;padding:0 12px;box-sizing:border-box;}
+.ledger-page{flex:none;width:20%;padding:0 8px;box-sizing:border-box;}
