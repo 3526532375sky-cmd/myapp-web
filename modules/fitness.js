@@ -228,6 +228,7 @@ App.register('fitness', function(container){
     html+='<div class="card"><h2>🗓 锻炼日历 <span class="plan-name">'+App.esc(currentPlanName())+'</span></h2>'+calendarHtml(today)+'</div>';
     html+='</div>';
     html+='<div class="card tips-card"><h2>🗓 当前阶段</h2><div class="sum-line">'+App.esc(plan.stage)+'</div><div class="sum-line">'+App.esc(plan.cycle)+'</div><p class="pre">'+App.esc(plan.goal)+'</p></div>';
+    html+=historyCard();
     html+=tipsCard('🍚 营养', plan.tips.nutrition);
     html+=tipsCard('😴 恢复', plan.tips.recovery);
     html+=tipsCard('📈 进阶规则', plan.tips.progress);
@@ -235,6 +236,11 @@ App.register('fitness', function(container){
     return html;
   }
 
+  function historyCard(){
+    var p=App.data.fitness.plan||{}; var h=(p.history||[]).slice().reverse();
+    var items=h.map(function(x){ return '<div class="rec-row"><span class="cat">'+App.esc(x.name)+'</span><span class="note">'+App.esc(x.from)+' ~ '+App.esc(x.to||'至今')+'</span></div>'; }).join('');
+    return '<div class="card tips-card"><h2>🗂 历史计划</h2>'+(items||'<div class="placeholder">暂无历史计划。</div>')+'</div>';
+  }
   function doseHtml(it){
     return (it.sets?it.sets+'组 × ':'')+App.esc(it.reps||'')+(it.weight?' × '+App.esc(it.weight):'')+(it.rest?' · 休 '+App.esc(it.rest):'');
   }

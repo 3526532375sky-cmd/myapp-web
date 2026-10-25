@@ -26,7 +26,7 @@ App.register('today', function(container){
       '<div class="card">'+
         (open.length+done.length ? open.map(itemHtml).join('') + done.map(itemHtml).join('') : '<div class="placeholder">还没有计划，在下方输入一条开始。</div>')+
       '</div>'+
-      '<div class="card"><div class="row"><input class="input" id="todayInput" placeholder="添加一项，回车确认"></div></div>'+
+      '<div class="card"><div class="row"><input class="input" id="todayInput" placeholder="添加一项"><button class="mbtn primary" id="btnAddToday" style="flex:none;padding:0 16px">添加</button></div></div>'+
       '<div class="card"><h2>📝 今日复盘</h2>'+
         '<div class="sum-line">已完成 '+rv.done+' / '+rv.total+' 项'+(rv.undone.length?'，未完成：'+rv.undone.map(function(u){return App.esc(u);}).join('、'):'')+'</div>'+
         (review ? '<p class="pre">'+App.esc(review.content)+'</p>' : '<div class="row"><input class="input" id="reviewInput" placeholder="为什么没做完？明天怎么办？（回车保存）"></div>')+
@@ -58,15 +58,17 @@ App.register('today', function(container){
       var composing = false;
       inp.addEventListener('compositionstart', function(){ composing = true; });
       inp.addEventListener('compositionend', function(){ composing = false; });
+      function addToday(){
+        var v = inp.value.trim();
+        if(!v){ App.toast('请输入内容'); return; }
+        App.data.today = App.data.today || [];
+        App.data.today.push({id:'t'+Date.now(), text:v, done:false, ts:Date.now()});
+        App.setData(App.data); render();
+      }
+      var addBtn = container.querySelector('#btnAddToday');
+      if(addBtn) addBtn.addEventListener('click', addToday);
       inp.addEventListener('keydown', function(e){
-        if(e.key==='Enter' && composing) return;
-        if(e.key==='Enter'){
-          var v = inp.value.trim();
-          if(!v){ App.toast('请输入内容'); return; }
-          App.data.today = App.data.today || [];
-          App.data.today.push({id:'t'+Date.now(), text:v, done:false, ts:Date.now()});
-          App.setData(App.data); render();
-        }
+        if(e.key==='Enter' && !composing){ addToday(); }
       });
     }
   }

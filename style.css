@@ -451,3 +451,8 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 /* 本周安排排版：不挤两行 */
 .week-row .wf{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;}
 .week-row .wt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px;}
+
+/* 阻止 modal 内滚动穿透到背景 */
+.modal-box{overscroll-behavior:contain;}
+.memo-sheet-box{overscroll-behavior:contain;}
+.wv-body{overscroll-behavior:contain;}
