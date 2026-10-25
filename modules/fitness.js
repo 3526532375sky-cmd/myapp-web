@@ -87,8 +87,8 @@ function bindWeekView(){
   var nx=box.querySelector('#wvNext'); if(nx) nx.addEventListener('click', function(){ weekNav(1); });
   box.querySelectorAll('[data-wv-check]').forEach(function(cb){ cb.addEventListener('change', function(){ var day=App.Logic.fitnessDayFor(App.data.fitness.plan, WV.page); if(day) wvToggle(day, WV.page, parseInt(cb.getAttribute('data-wv-check'),10)); renderWeekView(); }); });
   var vp=box.querySelector('#wvViewport'); if(!vp) return;
-  var startY=null, dragging=false, offset=0, base=-vp.clientHeight;
-  vp.style.transition='none'; vp.style.transform='translateY('+base+'px)';
+  var startY=null, dragging=false, offset=0, base=0;
+  setTimeout(function(){ base=-vp.clientHeight; vp.style.transition='none'; vp.style.transform='translateY('+base+'px)'; }, 30);
   vp.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; dragging=true; }, {passive:true});
   vp.addEventListener('touchmove', function(e){
     if(!dragging||startY==null) return;
