@@ -53,8 +53,8 @@ App.register('ledger', function(container){
     var g=s.goal, b=s.monthBudget;
     if(!g && !b) return '';
     var left='', right='';
-    if(g){ var p=Math.min(100,Math.max(0,Math.round(ms.balance/g*100))); var reached=ms.balance>=g; left='<div class="gb-half"><div class="sum-line">🎯 本月结余目标 '+L.fmtMoney(g)+' · '+L.fmtMoney(ms.balance)+'</div><div class="prog-track"><div class="prog-bar thick" style="width:'+p+'%;background:'+(reached?'var(--success)':'var(--accent)')+'"></div></div></div>'; }
-    if(b){ var p2=Math.min(100,Math.round(ms.expense/b*100)); var over=ms.expense>b; right='<div class="gb-half"><div class="sum-line">📊 本月支出预算 '+L.fmtMoney(b)+' · '+L.fmtMoney(ms.expense)+(over?' ⚠️超支':'')+'</div><div class="prog-track"><div class="prog-bar thick" style="width:'+p2+'%;background:'+(over?'var(--danger)':'var(--accent)')+'"></div></div></div>'; }
+    if(g){ var p=Math.min(100,Math.max(0,Math.round(ms.balance/g*100))); var reached=ms.balance>=g; left='<div class="gb-half"><div class="sum-line">🎯 本月结余目标 '+L.fmtMoney(g)+' · '+L.fmtMoney(ms.balance)+'</div><div class="prog-track thick"><div class="prog-bar" style="width:'+p+'%;background:'+(reached?'var(--success)':'var(--accent)')+'"></div></div></div>'; }
+    if(b){ var p2=Math.min(100,Math.round(ms.expense/b*100)); var over=ms.expense>b; right='<div class="gb-half"><div class="sum-line">📊 本月支出预算 '+L.fmtMoney(b)+' · '+L.fmtMoney(ms.expense)+(over?' ⚠️超支':'')+'</div><div class="prog-track thick"><div class="prog-bar" style="width:'+p2+'%;background:'+(over?'var(--danger)':'var(--accent)')+'"></div></div></div>'; }
     return '<div class="card"><div class="gb-row">'+left+right+'</div></div>';
   }
 
