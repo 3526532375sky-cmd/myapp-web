@@ -445,3 +445,7 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
   .trend{overflow-x:auto;}
   .donut-wrap{justify-content:center;}
 }
+
+/* 账本横向传送带翻页 */
+.ledger-strip{display:flex;width:500%;transform:translateX(0);will-change:transform;}
+.ledger-page{flex:0 0 20%;width:20%;}

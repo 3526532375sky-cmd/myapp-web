@@ -18,9 +18,11 @@ App.register('ledger', function(container){
   }
   function monthSum(){ return L.ledgerMonth(App.data.ledger.records || [], L.nowMonth()); }
 
+  var PAGES = ['flow','stats','year','fin','cfg'];
   function render(){
     var ms = monthSum();
     var tabs = container.querySelector('.seg2-tabs');
+    var strip = container.querySelector('.ledger-strip');
     if(!tabs){
       container.innerHTML = '<div class="seg2 seg2-tabs">'+
         '<button data-sub="flow" class="on">流水</button>'+
@@ -30,29 +32,80 @@ App.register('ledger', function(container){
         '<button data-sub="cfg">设置</button>'+
         '</div>';
       tabs = container.querySelector('.seg2-tabs');
-      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ sub=b.getAttribute('data-sub'); render(); } });
-      var hd = document.createElement('div'); hd.className = 'ledger-head'; tabs.before(hd);
-      var bd = document.createElement('div'); bd.id = 'ledgerBody'; tabs.after(bd);
+      tabs.addEventListener('click', function(e){ var b=e.target.closest('button[data-sub]'); if(b){ switchSub(b.getAttribute('data-sub')); } });
+      strip = document.createElement('div'); strip.className = 'ledger-strip';
+      PAGES.forEach(function(s){ var p=document.createElement('div'); p.className='ledger-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
+      tabs.after(strip);
     }
     tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
-    var head = container.querySelector('.ledger-head');
-    head.innerHTML = '';
-    if(sub==='flow'){
-      head.innerHTML = '<div class="stat3">'+
-        '<div class="stat-item"><div class="sl">本月支出</div><div class="sv exp">'+L.fmtMoney(ms.expense)+'</div></div>'+
-        '<div class="stat-item"><div class="sl">本月收入</div><div class="sv inc">'+L.fmtMoney(ms.income)+'</div></div>'+
-        '<div class="stat-item"><div class="sl">本月结余</div><div class="sv '+(ms.balance<0?'exp':'inc')+'">'+L.fmtMoney(ms.balance)+'</div></div>'+
-        '</div>' + goalBudgetHtml(ms);
-    }
-    var body = container.querySelector('#ledgerBody');
-    if(sub==='flow') body.innerHTML = renderFlow();
-    else if(sub==='stats') body.innerHTML = renderStats();
-    else if(sub==='year') body.innerHTML = renderYear();
-    else if(sub==='fin') body.innerHTML = renderFin();
-    else body.innerHTML = renderCfg();
-    bindBody();
+    renderAllPages(ms);
+    positionStrip(false);
+    bindAll();
   }
-
+  function statArea(ms){
+    return '<div class="stat3">'+
+      '<div class="stat-item"><div class="sl">本月支出</div><div class="sv exp">'+L.fmtMoney(ms.expense)+'</div></div>'+
+      '<div class="stat-item"><div class="sl">本月收入</div><div class="sv inc">'+L.fmtMoney(ms.income)+'</div></div>'+
+      '<div class="stat-item"><div class="sl">本月结余</div><div class="sv '+(ms.balance<0?'exp':'inc')+'">'+L.fmtMoney(ms.balance)+'</div></div>'+
+      '</div>' + goalBudgetHtml(ms);
+  }
+  function renderAllPages(ms){
+    PAGES.forEach(function(s){
+      var pg = container.querySelector('[data-page="'+s+'"]'); if(!pg) return;
+      var html = '';
+      if(s==='flow') html = statArea(ms) + renderFlow();
+      else if(s==='stats') html = renderStats();
+      else if(s==='year') html = renderYear();
+      else if(s==='fin') html = renderFin();
+      else html = renderCfg();
+      pg.innerHTML = html;
+    });
+  }
+  function positionStrip(animate){
+    var strip = container.querySelector('.ledger-strip'); if(!strip) return;
+    var idx = PAGES.indexOf(sub); if(idx<0) idx=0;
+    strip.style.transition = animate ? 'transform .3s cubic-bezier(.22,.61,.36,1)' : 'none';
+    strip.style.transform = 'translateX(' + (-idx*100) + '%)';
+  }
+  function switchSub(s){
+    sub = s;
+    container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
+    positionStrip(true);
+  }
+  // 横向传送带滑动翻页（跟手 + 边缘阻尼 + 速度判断 + 松手翻页/回弹）
+  var dgX = null, dgY = null, dgIdx = -1, dgH = null, dgW = 0, dgLx = null, dgLt = null, dgVx = 0;
+  container.addEventListener('touchstart', function(e){
+    if(!container.querySelector('.ledger-strip')) return;
+    dgX = e.touches[0].clientX; dgY = e.touches[0].clientY;
+    dgIdx = PAGES.indexOf(sub); if(dgIdx<0) dgIdx=0;
+    dgW = container.offsetWidth || window.innerWidth;
+    dgH = null; dgLx = e.touches[0].clientX; dgLt = Date.now(); dgVx = 0;
+  }, {passive:true});
+  container.addEventListener('touchmove', function(e){
+    if(dgX == null) return;
+    var dx = e.touches[0].clientX - dgX, dy = e.touches[0].clientY - dgY;
+    if(dgH == null){ if(Math.abs(dx)>10 && Math.abs(dx)>Math.abs(dy)) dgH = true; else if(Math.abs(dy)>10) dgH = false; }
+    if(dgH !== true) return;
+    var now = Date.now(), dt = now - dgLt; if(dt>0) dgVx = (e.touches[0].clientX - dgLx)/dt;
+    dgLx = e.touches[0].clientX; dgLt = now;
+    var strip = container.querySelector('.ledger-strip'); if(!strip) return;
+    var pct = dx / dgW * 100;
+    if(dgIdx === 0 && dx > 0) pct = dx * 0.35 / dgW * 100;
+    if(dgIdx === PAGES.length-1 && dx < 0) pct = dx * 0.35 / dgW * 100;
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateX(' + (-dgIdx*100 + pct) + '%)';
+  }, {passive:true});
+  container.addEventListener('touchend', function(e){
+    if(dgX == null) return;
+    if(dgH === true){
+      var dx = e.changedTouches[0].clientX - dgX;
+      var shouldFlip = Math.abs(dx) > dgW*0.25 || Math.abs(dgVx) > 0.5;
+      var next = (dx < 0) ? (dgIdx+1) : (dgIdx-1);
+      if(shouldFlip && next >= 0 && next < PAGES.length){ switchSub(PAGES[next]); }
+      else { positionStrip(true); }
+    }
+    dgX = null; dgY = null; dgH = null; dgIdx = -1;
+  }, {passive:true});
 
   function goalBudgetHtml(ms){
     var s = App.data.ledger.settings || {};
@@ -65,16 +118,18 @@ App.register('ledger', function(container){
     return html;
   }
 
-  function bindBody(){
-    var body = container.querySelector('#ledgerBody');
-    if(sub==='flow'){
+  function bindAll(){
+    var pg = function(s){ return container.querySelector('[data-page="'+s+'"]'); };
+    var body = pg('flow');
+    if(body){
       var s = body.querySelector('#flowFilter'); if(s) s.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; filter=b.getAttribute('data-f'); render(); });
       var q = body.querySelector('#flowSearch'); if(q) q.addEventListener('input', function(){ query=q.value.trim(); renderFlowOnly(); });
       var add = body.querySelector('#btnAddRecord'); if(add) add.addEventListener('click', function(){ openRecordModal(null); });
       var qb = body.querySelector('#quickBar'); if(qb) qb.addEventListener('click', function(e){ var b=e.target.closest('button[data-qi]'); if(!b)return; quickOpen(parseInt(b.getAttribute('data-qi'),10)); });
       bindFlow();
     }
-    if(sub==='cfg'){
+    body = pg('cfg');
+    if(body){
       var bs = body.querySelector('#btnBudgetSave'); if(bs) bs.addEventListener('click', saveBudget);
       var ba = body.querySelector('#btnBillAdd'); if(ba) ba.addEventListener('click', addBill);
       body.querySelectorAll('[data-bill-del]').forEach(function(b){ b.addEventListener('click', function(){ delBill(b.getAttribute('data-bill-del')); }); });
@@ -94,11 +149,13 @@ App.register('ledger', function(container){
       body.querySelectorAll('[data-quick-del]').forEach(function(b){ b.addEventListener('click', function(){ delQuick(b.getAttribute('data-quick-del')); }); });
       var ce = body.querySelector('#btnExportCSV'); if(ce) ce.addEventListener('click', exportCSV);
     }
-    if(sub==='year'){
+    body = pg('year');
+    if(body){
       body.querySelectorAll('[data-yp]').forEach(function(b){ b.addEventListener('click', function(){ year = String(parseInt(year,10)+parseInt(b.getAttribute('data-yp'),10)); render(); }); });
       var ys = body.querySelector('#yearSeg'); if(ys) ys.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; yearMode=b.getAttribute('data-ym'); render(); });
     }
-    if(sub==='fin'){
+    body = pg('fin');
+    if(body){
       var ha = body.querySelector('#btnHoldAdd'); if(ha) ha.addEventListener('click', function(){ openHoldingModal(null); });
       body.querySelectorAll('[data-hold-edit]').forEach(function(b){ b.addEventListener('click', function(){ openHoldingModal(b.getAttribute('data-hold-edit')); }); });
       body.querySelectorAll('[data-hold-del]').forEach(function(b){ b.addEventListener('click', function(){ delHolding(b.getAttribute('data-hold-del')); }); });

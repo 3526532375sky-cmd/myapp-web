@@ -341,7 +341,8 @@ function init(){
   document.addEventListener('touchstart', function(e){
     var inContent = e.target.closest ? e.target.closest('.content') : null;
     var seg = document.querySelector('.seg2-tabs');
-    if(inContent && seg){
+    var hasStrip = document.querySelector('.ledger-strip');
+    if(inContent && seg && !hasStrip){
       swX = e.touches[0].clientX; swY = e.touches[0].clientY; swSeg = seg; swH = null;
       swBodies = [];
       if(seg.previousElementSibling) swBodies.push(seg.previousElementSibling);
