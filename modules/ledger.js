@@ -65,7 +65,8 @@ App.register('ledger', function(container){
     var strip = container.querySelector('.ledger-strip'); if(!strip) return;
     var idx = PAGES.indexOf(sub); if(idx<0) idx=0;
     strip.style.transition = animate ? 'transform .3s cubic-bezier(.22,.61,.36,1)' : 'none';
-    strip.style.transform = 'translateX(' + (-idx*100) + '%)';
+    var w = container.offsetWidth || window.innerWidth;
+  strip.style.transform = 'translateX(' + (-idx*w) + 'px)';
   }
   function switchSub(s){
     sub = s;
@@ -89,11 +90,11 @@ App.register('ledger', function(container){
     var now = Date.now(), dt = now - dgLt; if(dt>0) dgVx = (e.touches[0].clientX - dgLx)/dt;
     dgLx = e.touches[0].clientX; dgLt = now;
     var strip = container.querySelector('.ledger-strip'); if(!strip) return;
-    var pct = dx / dgW * 100;
-    if(dgIdx === 0 && dx > 0) pct = dx * 0.35 / dgW * 100;
-    if(dgIdx === PAGES.length-1 && dx < 0) pct = dx * 0.35 / dgW * 100;
+    var off = dx;
+    if(dgIdx === 0 && dx > 0) off = dx * 0.35;
+    if(dgIdx === PAGES.length-1 && dx < 0) off = dx * 0.35;
     strip.style.transition = 'none';
-    strip.style.transform = 'translateX(' + (-dgIdx*100 + pct) + '%)';
+    strip.style.transform = 'translateX(' + (-dgIdx*dgW + off) + 'px)';
   }, {passive:true});
   container.addEventListener('touchend', function(e){
     if(dgX == null) return;
