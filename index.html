@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>我的 App</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 密码页 -->
+  <div id="screen-lock" class="screen lock">
+    <div class="lock-card">
+      <div class="lock-icon">🔐</div>
+      <h1>我的 App</h1>
+      <p class="lock-hint" id="lockHint">输入主密码进入</p>
+      <input type="password" id="pw1" placeholder="主密码" autocomplete="off" aria-label="主密码">
+      <input type="password" id="pw2" placeholder="再次输入确认" autocomplete="off" class="hidden" aria-label="再次输入确认">
+      <button id="btnUnlock">进入</button>
+      <div id="lockErr" class="err hidden" role="alert">密码错误</div>
+      <p class="lock-foot">数据已用主密码加密，仅保存在本机</p>
+    </div>
+  </div>
+
+  <!-- 主应用 -->
+  <div id="screen-app" class="screen app hidden">
+    <aside class="sidebar">
+      <div class="brand">我的 App</div>
+      <nav id="nav" aria-label="主导航">
+        <button data-m="home" class="on"><span>🏠</span>首页总览</button>
+        <button data-m="today"><span>📋</span>今日计划</button>
+        <button data-m="work"><span>💼</span>工作计划</button>
+        <button data-m="ledger"><span>💰</span>账本</button>
+        <button data-m="study"><span>📚</span>学习计划</button>
+        <button data-m="fitness"><span>💪</span>健身计划</button>
+        <button data-m="decision"><span>🧭</span>决策</button>
+        <button data-m="settings"><span>⚙️</span>数据与设置</button>
+      </nav>
+      <button id="btnLock" class="lock-btn">🔒 锁定</button>
+    </aside>
+    <main class="content">
+      <div id="view" class="view"></div>
+    </main>
+  </div>
+
+  <!-- 通用弹窗 -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+      <div class="modal-head"><span id="modalTitle"></span><button class="modal-x" aria-label="关闭">✕</button></div>
+      <div class="modal-body"></div>
+      <div class="modal-btns">
+        <button class="mbtn ghost modal-cancel">取消</button>
+        <button class="mbtn primary modal-save">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="logic.js"></script>
+  <script src="crypto.js"></script>
+  <script src="sync.js"></script>
+  <script src="app.js"></script>
+  <script src="modules/today.js"></script>
+  <script src="modules/ledger.js"></script>
+  <script src="modules/work.js"></script>
+  <script src="modules/study.js"></script>
+  <script src="modules/fitness.js"></script>
+  <script src="modules/decision.js"></script>
+  <script src="modules/settings.js"></script>
+  <script src="modules/home.js"></script>
+</body>
+</html>
