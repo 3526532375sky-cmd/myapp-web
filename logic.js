@@ -306,6 +306,22 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     return (manuals||[]).filter(function(m){ return grams.some(function(g){ return (m.title||'').indexOf(g)>=0 || (m.content||'').indexOf(g)>=0; }); });
   }
 
+  // 收支分析：结余率/餐饮占比/环比/同比
+  function ledgerAnalysis(records, cur){
+    var m = ledgerMonth(records, cur);
+    var d = new Date(cur+'-01T00:00:00'); d.setDate(0); var prev = monthKey(d);
+    var pm = ledgerMonth(records, prev);
+    var y = String(parseInt(cur.slice(0,4),10)-1) + cur.slice(4);
+    var ym = ledgerMonth(records, y);
+    var saveRate = m.income>0 ? Math.round(m.balance/m.income*100) : null;
+    var food=0;
+    (records||[]).forEach(function(r){ if(r.date && r.date.indexOf(cur)===0 && r.type==='expense' && r.category==='餐饮') food += Number(r.amount)||0; });
+    var foodPct = m.expense>0 ? Math.round(food/m.expense*100) : 0;
+    var mom = pm.expense>0 ? Math.round((m.expense-pm.expense)/pm.expense*100) : null;
+    var yoy = ym.expense>0 ? Math.round((m.expense-ym.expense)/ym.expense*100) : null;
+    return { month:m, prevMonth:pm, saveRate:saveRate, foodPct:foodPct, mom:mom, yoy:yoy };
+  }
+
   // 日复盘：完成统计 + 未完成项列表
   function dailyReview(today){
     var arr = today || [];
@@ -351,6 +367,7 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     decisionBoard: decisionBoard,
     matchManuals: matchManuals,
     dailyReview: dailyReview,
+    ledgerAnalysis: ledgerAnalysis,
     isValidAppData: isValidAppData
   };
 });

@@ -50,10 +50,12 @@ App.register('ledger', function(container){
 
   function goalBudgetHtml(ms){
     var s = App.data.ledger.settings || {};
-    var h = '';
-    if(s.goal){ var p=Math.min(100,Math.max(0,Math.round(ms.balance/s.goal*100))); h+='<div class="card"><div class="sum-line">🎯 本月结余目标 '+L.fmtMoney(s.goal)+' · 当前 '+L.fmtMoney(ms.balance)+'</div><div class="prog-track"><div class="prog-bar" style="width:'+p+'%"></div></div></div>'; }
-    if(s.monthBudget){ var p2=Math.min(100,Math.round(ms.expense/s.monthBudget*100)); var over=ms.expense>s.monthBudget; h+='<div class="card"><div class="sum-line">📊 本月支出预算 '+L.fmtMoney(s.monthBudget)+' · 已用 '+L.fmtMoney(ms.expense)+(over?' · ⚠️ 已超支':'')+'</div><div class="prog-track"><div class="prog-bar" style="width:'+p2+'%;background:'+(over?'var(--danger)':'var(--accent)')+'"></div></div></div>'; }
-    return h;
+    var g=s.goal, b=s.monthBudget;
+    if(!g && !b) return '';
+    var left='', right='';
+    if(g){ var p=Math.min(100,Math.max(0,Math.round(ms.balance/g*100))); var reached=ms.balance>=g; left='<div class="gb-half"><div class="sum-line">🎯 本月结余目标 '+L.fmtMoney(g)+' · '+L.fmtMoney(ms.balance)+'</div><div class="prog-track"><div class="prog-bar thick" style="width:'+p+'%;background:'+(reached?'var(--success)':'var(--accent)')+'"></div></div></div>'; }
+    if(b){ var p2=Math.min(100,Math.round(ms.expense/b*100)); var over=ms.expense>b; right='<div class="gb-half"><div class="sum-line">📊 本月支出预算 '+L.fmtMoney(b)+' · '+L.fmtMoney(ms.expense)+(over?' ⚠️超支':'')+'</div><div class="prog-track"><div class="prog-bar thick" style="width:'+p2+'%;background:'+(over?'var(--danger)':'var(--accent)')+'"></div></div></div>'; }
+    return '<div class="card"><div class="gb-row">'+left+right+'</div></div>';
   }
 
   function bindBody(){
@@ -123,7 +125,7 @@ App.register('ledger', function(container){
       Object.keys(months).sort().reverse().forEach(function(m){
         var mk=y+'-'+m, arr=months[m]; var de=0,di=0; arr.forEach(function(x){ if(x.type==='expense')de+=Number(x.amount); else di+=Number(x.amount); });
         var open=!!openMonths[mk];
-        h += '<div class="tree-month"><button class="tm-head" data-mk="'+mk+'">'+parseInt(m,10)+' 月 · 支 '+L.fmtMoney(de)+' · 收 '+L.fmtMoney(di)+' '+(open?'▾':'▸')+'</button>';
+        h += '<div class="tree-month"><button class="tm-head" data-mk="'+mk+'">'+parseInt(m,10)+' 月 · <span class="exp">支 '+L.fmtMoney(de)+'</span> · <span class="inc">收 '+L.fmtMoney(di)+'</span> '+(open?'▾':'▸')+'</button>';
         if(open){
           var days={}; arr.forEach(function(x){ if(!days[x.date])days[x.date]=[]; days[x.date].push(x); });
           Object.keys(days).sort().reverse().forEach(function(d){
@@ -206,8 +208,8 @@ App.register('ledger', function(container){
     var html='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
     for(var g=0;g<=4;g++){ var val=max*g/4,y=padT+plotH-g*plotH/4; html+='<line x1="'+padL+'" y1="'+y+'" x2="'+(W-12)+'" y2="'+y+'" stroke="var(--border)" stroke-dasharray="3 4"/>'; html+='<text x="'+(padL-6)+'" y="'+(y+3.5)+'" font-size="10" text-anchor="end" fill="var(--text-3)">'+shortNum(val)+'</text>'; }
     data.forEach(function(x,idx){ var cx=padL+idx*bw+bw/2;
-      if(mode!=='income'){ var he=x.e/max*plotH; html+='<rect x="'+(cx-bw*0.24)+'" y="'+(padT+plotH-he)+'" width="'+(bw*0.2)+'" height="'+(he>0?he:1)+'" rx="2" fill="var(--success)"><title>支出 '+L.fmtMoney(x.e)+'</title></rect>'; }
-      if(mode!=='expense'){ var hi=x.i/max*plotH; html+='<rect x="'+(cx+bw*0.04)+'" y="'+(padT+plotH-hi)+'" width="'+(bw*0.2)+'" height="'+(hi>0?hi:1)+'" rx="2" fill="var(--danger)"><title>收入 '+L.fmtMoney(x.i)+'</title></rect>'; }
+      if(mode!=='income'){ var he=x.e/max*plotH; html+='<rect x="'+(cx-bw*0.36)+'" y="'+(padT+plotH-he)+'" width="'+(bw*0.32)+'" height="'+(he>0?he:1)+'" rx="3" fill="var(--success)"><title>支出 '+L.fmtMoney(x.e)+'</title></rect>'; }
+      if(mode!=='expense'){ var hi=x.i/max*plotH; html+='<rect x="'+(cx+bw*0.04)+'" y="'+(padT+plotH-hi)+'" width="'+(bw*0.32)+'" height="'+(hi>0?hi:1)+'" rx="3" fill="var(--danger)"><title>收入 '+L.fmtMoney(x.i)+'</title></rect>'; }
       html+='<text x="'+cx+'" y="'+(H-6)+'" font-size="9" text-anchor="middle" fill="var(--text-3)">'+parseInt(x.mk.slice(5,7),10)+'月</text>';
     });
     return html+'</svg>';
@@ -255,9 +257,19 @@ App.register('ledger', function(container){
       '<div class="card"><h2>本月每日支出</h2>'+dailyHtml(recs,cur,days)+'</div>'+
       (top3?'<div class="card"><h2>支出 Top 3</h2>'+top3+'</div>':'')+
       '<div class="card"><h2>近 12 个月收支</h2>'+trend+'</div>'+
-      '<div class="card"><h2>今年 vs 去年</h2><div class="sum-line">本年支出 '+fmtM(m.expense)+' · 去年支出 '+fmtM(ps.expense)+' · 同比 '+(diff>=0?'+':'')+diff+'%</div></div>';
+      analysisHtml(recs, cur);
   }
 
+  function anRow(name, val, desc){ return '<div class="an-row"><span class="an-name">'+name+'</span><span class="an-val">'+val+'</span><span class="an-desc">'+desc+'</span></div>'; }
+  function analysisHtml(recs, cur){
+    var an = L.ledgerAnalysis(recs, cur);
+    var rows = '';
+    rows += anRow('💰 结余率', an.saveRate==null?'—':an.saveRate+'%', an.saveRate==null?'本月无收入':(an.saveRate>=0?'结余为正，有储蓄':'结余为负，入不敷出'));
+    rows += anRow('🍚 餐饮占比', an.foodPct+'%', '餐饮占总支出的比例（近似恩格尔系数）');
+    rows += anRow('📉 环比', an.mom==null?'—':(an.mom>0?'+':'')+an.mom+'%', '本月支出较上月');
+    rows += anRow('📅 同比', an.yoy==null?'—':(an.yoy>0?'+':'')+an.yoy+'%', '本月支出较去年同月');
+    return '<div class="card"><h2>📊 收支分析</h2>'+rows+'</div>';
+  }
   function dailyHtml(recs, cur, days){
     var data=[]; for(var i=1;i<=days;i++) data[i]=0;
     recs.forEach(function(r){ if(r.date&&r.date.indexOf(cur)===0&&r.type==='expense'){ var d=parseInt(r.date.slice(8,10),10); if(d>=1&&d<=days) data[d]+=Number(r.amount); } });

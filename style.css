@@ -484,3 +484,17 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
   .trend{overflow-x:auto;}
   .donut-wrap{justify-content:center;}
 }
+
+/* 预算目标同一行 + 粗柱 */
+.gb-row{display:flex;gap:16px;}
+.gb-half{flex:1;min-width:0;}
+.gb-half .sum-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;}
+.prog-bar.thick{height:14px;border-radius:var(--radius-full);}
+@media (max-width:560px){ .gb-row{flex-direction:column;gap:10px;} }
+
+/* 收支分析行 */
+.an-row{display:flex;align-items:baseline;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.an-row:last-child{border-bottom:none;}
+.an-name{flex:none;font-weight:600;font-size:13px;}
+.an-val{flex:none;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--accent);}
+.an-desc{flex:1;color:var(--text-3);font-size:12px;text-align:right;}
