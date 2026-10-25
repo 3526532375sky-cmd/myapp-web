@@ -306,7 +306,7 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .plan-name{font-size:12px;font-weight:600;color:var(--accent);background:var(--surface-2);padding:2px 8px;border-radius:var(--radius-full);margin-left:6px;}
 
 /* ============ 健身：左右布局 + 锻炼日历 ============ */
-.plan-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-bottom:12px;}
+.plan-split{display:grid;grid-template-columns:1fr;gap:16px;align-items:stretch;margin-bottom:12px;}
 .plan-split .card{margin-bottom:0;height:100%;display:flex;flex-direction:column;}
 .week-row .sel-mark{color:var(--warning);font-weight:700;font-size:12px;padding:1px 8px;border:1px solid var(--warning);border-radius:var(--radius-full);}
 .wk-num{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap;}

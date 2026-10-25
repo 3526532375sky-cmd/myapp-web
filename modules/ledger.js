@@ -1,4 +1,4 @@
-/* modules/ledger.js —— 账本 */
+﻿/* modules/ledger.js —— 账本 */
 (function(){
 'use strict';
 var sub = 'flow'; // 模块级：离开账本再回来保留，重启重置为流水
@@ -23,6 +23,7 @@ App.register('ledger', function(container){
   function render(){
     var ms = monthSum();
     var tabs = container.querySelector('.seg2-tabs');
+    var strip = container.querySelector('.pager-strip');
     if(!tabs){
       container.innerHTML = '<div class="seg2 seg2-tabs">'+
         '<button data-sub="flow" class="on">流水</button>'+
