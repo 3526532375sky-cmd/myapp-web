@@ -42,7 +42,17 @@ App.register('ledger', function(container){
       PAGES.forEach(function(s){ var p=document.createElement('div'); p.className='pager-page'; p.setAttribute('data-page', s); strip.appendChild(p); });
       viewport.appendChild(strip);
       tabs.after(viewport);
+      var fab = document.createElement('button');
+      fab.className = 'fab';
+      fab.id = 'btnAddRecord';
+      fab.type = 'button';
+      fab.setAttribute('aria-label', '记一笔');
+      fab.textContent = '＋';
+      fab.addEventListener('click', function(){ openRecordModal(null); });
+      container.appendChild(fab);
     }
+    var fab = container.querySelector('#btnAddRecord');
+    if(fab) fab.style.display = (sub==='flow') ? '' : 'none';
     tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
     renderAllPages(ms);
     positionStrip(false);
@@ -77,6 +87,8 @@ App.register('ledger', function(container){
   }
   function switchSub(s){
     sub = s;
+    var fab = container.querySelector('#btnAddRecord');
+    if(fab) fab.style.display = (sub==='flow') ? '' : 'none';
     container.querySelectorAll('.seg2-tabs button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sub')===sub); });
     positionStrip(true);
   }
@@ -99,7 +111,7 @@ App.register('ledger', function(container){
     if(body){
       var s = body.querySelector('#flowFilter'); if(s) s.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; filter=b.getAttribute('data-f'); render(); });
       var q = body.querySelector('#flowSearch'); if(q) q.addEventListener('input', function(){ query=q.value.trim(); renderFlowOnly(); });
-      var add = body.querySelector('#btnAddRecord'); if(add) add.addEventListener('click', function(){ openRecordModal(null); });
+
       var qb = body.querySelector('#quickBar'); if(qb) qb.addEventListener('click', function(e){ var b=e.target.closest('button[data-qi]'); if(!b)return; quickOpen(parseInt(b.getAttribute('data-qi'),10)); });
       bindFlow();
     }
@@ -188,8 +200,7 @@ App.register('ledger', function(container){
       '<button data-f="expense" class="'+(filter==='expense'?'on':'')+'">支出</button>'+
       '<button data-f="income" class="'+(filter==='income'?'on':'')+'">收入</button>'+
       '</div><input class="input" id="flowSearch" placeholder="搜索分类或备注…" value="'+App.esc(query)+'">'+
-      '<div id="flowList" style="margin-top:10px">'+flowTreeHtml()+'</div></div>'+
-      '<button class="fab" id="btnAddRecord">＋</button>';
+      '<div id="flowList" style="margin-top:10px">'+flowTreeHtml()+'</div></div>';
   }
   function quickOpen(i){
     var q = (App.data.ledger.settings.quick||[])[i]; if(!q) return;

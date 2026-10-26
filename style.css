@@ -448,5 +448,5 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
 
 /* 账本横向传送带翻页 */
 .pager-viewport{overflow:hidden;}
-.pager-strip{display:flex;transform:translateX(0);will-change:transform;}
+.pager-strip{display:flex;align-items:flex-start;transform:translateX(0);will-change:transform;}
 .pager-page{flex:1 0 0;min-width:0;box-sizing:border-box;padding:0 4px;}

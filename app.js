@@ -1,4 +1,4 @@
-/* app.js —— 核心：数据、加密、密码、路由、通用组件 */
+﻿/* app.js —— 核心：数据、加密、密码、路由、通用组件 */
 (function(){
 'use strict';
 
@@ -228,6 +228,7 @@ function renderView(){
   if(bb){ bb.addEventListener('click', function(){ goBack(); }); }
   if(mods[active]) mods[active](body);
   else body.innerHTML = '<div class="card"><div class="placeholder">该模块正在搭建中。</div></div>';
+  syncPagerHeight();
 }
 
 // ===== 对外 API =====
@@ -377,5 +378,25 @@ function init(){
     pgX = null; pgY = null; pgStrip = null; pgIdx = -1; pgH = null;
   }, {passive:true});
 }
+
+// ===== 翻页容器高度同步：滚动高度跟随当前子页签内容，消除短页面下的空白 =====
+function syncPagerHeight(){
+  var vp = document.querySelector('.pager-viewport');
+  if(!vp) return;
+  var strip = vp.querySelector('.pager-strip');
+  if(!strip) return;
+  var idx = parseInt(strip.getAttribute('data-idx') || '0', 10);
+  var page = strip.children[idx];
+  if(page && page.offsetHeight) vp.style.height = page.offsetHeight + 'px';
+}
+var pagerSyncPending = false;
+function schedulePagerSync(){
+  if(pagerSyncPending) return;
+  pagerSyncPending = true;
+  requestAnimationFrame(function(){ pagerSyncPending = false; syncPagerHeight(); });
+}
+window.addEventListener('resize', schedulePagerSync);
+var pagerObserver = new MutationObserver(function(){ schedulePagerSync(); });
+pagerObserver.observe(document.body, {subtree:true, childList:true, attributes:true, attributeFilter:['data-idx']});
 init();
 })();
