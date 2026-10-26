@@ -111,7 +111,8 @@ App.register('ledger', function(container){
     if(body){
       var s = body.querySelector('#flowFilter'); if(s) s.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; filter=b.getAttribute('data-f'); render(); });
       var q = body.querySelector('#flowSearch'); if(q) q.addEventListener('input', function(){ query=q.value.trim(); renderFlowOnly(); });
-      var bs = body.querySelector('#btnSearch'); if(bs) bs.addEventListener('click', function(){ var si=body.querySelector('#flowSearch'); if(!si) return; var hide = si.style.display !== 'none'; si.style.display = hide ? 'none' : 'block'; if(!hide){ si.focus(); } });
+      var bs = body.querySelector('#btnSearch'); if(bs) bs.addEventListener('click', function(){ var sb=body.querySelector('#searchBox'); if(!sb) return; var open=sb.classList.toggle('open'); bs.classList.toggle('on', open); if(open){ var si=sb.querySelector('#flowSearch'); if(si) si.focus(); } });
+      var bc = body.querySelector('#btnSearchClear'); if(bc) bc.addEventListener('click', function(){ var si=body.querySelector('#flowSearch'); if(si) si.value=''; query=''; renderFlowOnly(); var sb=body.querySelector('#searchBox'); if(sb) sb.classList.remove('open'); var bt=body.querySelector('#btnSearch'); if(bt) bt.classList.remove('on'); });
 
       var qb = body.querySelector('#quickBar'); if(qb) qb.addEventListener('click', function(e){ var b=e.target.closest('button[data-qi]'); if(!b)return; quickOpen(parseInt(b.getAttribute('data-qi'),10)); });
       bindFlow();
@@ -177,7 +178,7 @@ App.register('ledger', function(container){
       Object.keys(months).sort().reverse().forEach(function(m){
         var mk=y+'-'+m, arr=months[m]; var de=0,di=0; arr.forEach(function(x){ if(x.type==='expense')de+=Number(x.amount); else di+=Number(x.amount); });
         var open=!!openMonths[mk];
-        h += '<div class="tree-month"><button class="tm-head" data-mk="'+mk+'"><span class="tm-label">'+parseInt(m,10)+' 月 <span class="tm-caret">'+(open?'▾':'▸')+'</span></span><span class="tm-sums"><span class="inc">收 <span class="v">'+L.fmtMoney(di)+'</span></span><span class="exp">支 <span class="v">'+L.fmtMoney(de)+'</span></span></span></button>';
+        h += '<div class="tree-month"><button class="tm-head" data-mk="'+mk+'"><span class="tm-label">'+parseInt(m,10)+' 月 <span class="tm-caret">'+(open?'▾':'▸')+'</span></span><span class="tm-sums"><span class="exp">支<span class="v">'+L.fmtMoney(de)+'</span></span><span class="inc">收<span class="v">'+L.fmtMoney(di)+'</span></span></span></button>';
         if(open){
           var days={}; arr.forEach(function(x){ if(!days[x.date])days[x.date]=[]; days[x.date].push(x); });
           Object.keys(days).sort().reverse().forEach(function(d){
@@ -202,9 +203,9 @@ App.register('ledger', function(container){
       '<button data-f="expense" class="'+(filter==='expense'?'on':'')+'">支出</button>'+
       '<button data-f="income" class="'+(filter==='income'?'on':'')+'">收入</button>'+
       '</div>'+
-      '<button type="button" class="search-toggle" id="btnSearch" aria-label="搜索" title="搜索">🔍</button>'+
+      '<button type="button" class="search-toggle'+(query?' on':'')+'" id="btnSearch" aria-label="搜索" title="搜索">🔍</button>'+
       '</div>'+
-      '<input class="input" id="flowSearch" placeholder="搜索分类或备注…" value="'+App.esc(query)+'" style="display:'+(query?'block':'none')+'">'+
+      '<div class="search-box'+(query?' open':'')+'" id="searchBox"><span class="search-ico">🔍</span><input class="input" id="flowSearch" placeholder="搜索分类或备注…" value="'+App.esc(query)+'"><button type="button" class="search-clear" id="btnSearchClear" aria-label="清空并关闭">✕</button></div>'+
       '<div id="flowList" style="margin-top:10px">'+flowTreeHtml()+'</div></div>';
   }
   function quickOpen(i){
