@@ -111,6 +111,7 @@ App.register('ledger', function(container){
     if(body){
       var s = body.querySelector('#flowFilter'); if(s) s.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; filter=b.getAttribute('data-f'); render(); });
       var q = body.querySelector('#flowSearch'); if(q) q.addEventListener('input', function(){ query=q.value.trim(); renderFlowOnly(); });
+      var bs = body.querySelector('#btnSearch'); if(bs) bs.addEventListener('click', function(){ var si=body.querySelector('#flowSearch'); if(!si) return; var hide = si.style.display !== 'none'; si.style.display = hide ? 'none' : 'block'; if(!hide){ si.focus(); } });
 
       var qb = body.querySelector('#quickBar'); if(qb) qb.addEventListener('click', function(e){ var b=e.target.closest('button[data-qi]'); if(!b)return; quickOpen(parseInt(b.getAttribute('data-qi'),10)); });
       bindFlow();
@@ -176,7 +177,7 @@ App.register('ledger', function(container){
       Object.keys(months).sort().reverse().forEach(function(m){
         var mk=y+'-'+m, arr=months[m]; var de=0,di=0; arr.forEach(function(x){ if(x.type==='expense')de+=Number(x.amount); else di+=Number(x.amount); });
         var open=!!openMonths[mk];
-        h += '<div class="tree-month"><button class="tm-head" data-mk="'+mk+'">'+parseInt(m,10)+' 月 · <span class="exp">支 '+L.fmtMoney(de)+'</span> · <span class="inc">收 '+L.fmtMoney(di)+'</span> '+(open?'▾':'▸')+'</button>';
+        h += '<div class="tree-month"><button class="tm-head" data-mk="'+mk+'"><span class="tm-label">'+parseInt(m,10)+' 月 <span class="tm-caret">'+(open?'▾':'▸')+'</span></span><span class="tm-sums"><span class="inc">收 <span class="v">'+L.fmtMoney(di)+'</span></span><span class="exp">支 <span class="v">'+L.fmtMoney(de)+'</span></span></span></button>';
         if(open){
           var days={}; arr.forEach(function(x){ if(!days[x.date])days[x.date]=[]; days[x.date].push(x); });
           Object.keys(days).sort().reverse().forEach(function(d){
@@ -195,11 +196,15 @@ App.register('ledger', function(container){
     var quick = App.data.ledger.settings.quick || [];
     var qh = quick.length ? '<div class="card"><div class="sum-line">⚡ 快捷记账</div><div id="quickBar" class="quick-row">'+quick.map(function(q,i){ return '<button class="mbtn ghost" data-qi="'+i+'">'+emojiFor(q.category)+' '+App.esc(q.name||q.category)+'</button>'; }).join('')+'</div></div>' : '';
     return qh +
-      '<div class="card"><div class="seg2" id="flowFilter">'+
+      '<div class="card"><div class="flow-top">'+
+      '<div class="seg2" id="flowFilter">'+
       '<button data-f="all" class="'+(filter==='all'?'on':'')+'">全部</button>'+
       '<button data-f="expense" class="'+(filter==='expense'?'on':'')+'">支出</button>'+
       '<button data-f="income" class="'+(filter==='income'?'on':'')+'">收入</button>'+
-      '</div><input class="input" id="flowSearch" placeholder="搜索分类或备注…" value="'+App.esc(query)+'">'+
+      '</div>'+
+      '<button type="button" class="search-toggle" id="btnSearch" aria-label="搜索" title="搜索">🔍</button>'+
+      '</div>'+
+      '<input class="input" id="flowSearch" placeholder="搜索分类或备注…" value="'+App.esc(query)+'" style="display:'+(query?'block':'none')+'">'+
       '<div id="flowList" style="margin-top:10px">'+flowTreeHtml()+'</div></div>';
   }
   function quickOpen(i){
@@ -210,26 +215,34 @@ App.register('ledger', function(container){
     var r = id ? (App.data.ledger.records||[]).find(function(x){return x.id===id;}) : null;
     editingId = id; editingBase = r ? Number(r.amount) : 0;
     var type = r ? r.type : (presetType||'expense');
+    var curType = type;
     function optsFor(t){ return catsOf(t).map(function(c){ return '<option value="'+App.esc(c)+'">'+emojiFor(c)+' '+App.esc(c)+'</option>'; }).join(''); }
     App.openModal(
-      '<div class="field"><label>类型</label><select class="input" id="recType"><option value="expense"'+(type==='expense'?' selected':'')+'>支出</option><option value="income"'+(type==='income'?' selected':'')+'>收入</option></select></div>'+
+      '<div class="field"><label>类型</label><div class="seg2 type-seg" id="recTypeSeg"><button type="button" data-rt="expense" class="'+(curType==='expense'?'on':'')+'">支出</button><button type="button" data-rt="income" class="'+(curType==='income'?'on':'')+'">收入</button></div></div>'+
       '<div class="field"><label>金额'+(r?'（原 '+L.fmtMoney(editingBase)+'，可输 +50/-30 加减）':'')+'</label><input class="input" id="recAmount" inputmode="decimal" value="'+(r?r.amount:(presetAmount||''))+'"></div>'+
-      '<div class="field"><label>分类</label><select class="input" id="recCat">'+optsFor(type)+'</select></div>'+
+      '<div class="field"><label>分类</label><select class="input" id="recCat">'+optsFor(curType)+'</select></div>'+
       '<div class="field"><label>日期</label><input class="input" id="recDate" type="date" value="'+(r?r.date:L.todayStr())+'"></div>'+
       '<div class="field"><label>备注</label><input class="input" id="recNote" value="'+(r?App.esc(r.note||''):App.esc(presetNote||''))+'"></div>',
       { title: r?'编辑记录':'记一笔', saveText:'保存', onSave:function(close){
         var amt = parsePlus(document.getElementById('recAmount').value, editingId?editingBase:0);
         if(amt==null||amt<=0){ App.toast('请输入有效金额'); return; }
-        var t2 = document.getElementById('recType').value;
+        var t2 = curType;
         var obj = { type:t2, amount:amt, category:document.getElementById('recCat').value, date:document.getElementById('recDate').value||L.todayStr(), note:document.getElementById('recNote').value.trim() };
         if(editingId){ App.data.ledger.records = (App.data.ledger.records||[]).map(function(x){ return x.id===editingId ? Object.assign({}, x, obj) : x; }); }
         else { obj.id='r'+Date.now(); obj.ts=Date.now(); App.data.ledger.records = (App.data.ledger.records||[]).concat([obj]); }
         App.setData(App.data); close(); render(); App.toast(editingId?'已修改':'已记录');
       }}
     );
-    var tt = document.getElementById('recType');
-    tt.addEventListener('change', function(){ var cat=document.getElementById('recCat'); var cur=cat.value; cat.innerHTML=optsFor(tt.value); if(cur&&catsOf(tt.value).indexOf(cur)>=0)cat.value=cur; });
-    var sel = document.getElementById('recCat'); if(r||presetCat){ if(catsOf(type).indexOf(r?r.category:presetCat)>=0) sel.value = r?r.category:presetCat; }
+    var seg = document.getElementById('recTypeSeg');
+    seg.addEventListener('click', function(e){
+      var b = e.target.closest('button[data-rt]'); if(!b) return;
+      curType = b.getAttribute('data-rt');
+      seg.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+      var cat=document.getElementById('recCat'); var cur=cat.value;
+      cat.innerHTML=optsFor(curType);
+      if(cur && catsOf(curType).indexOf(cur)>=0) cat.value=cur;
+    });
+    var sel = document.getElementById('recCat'); if(r||presetCat){ if(catsOf(curType).indexOf(r?r.category:presetCat)>=0) sel.value = r?r.category:presetCat; }
   }
   function parsePlus(v, base){
     v = String(v).trim();
