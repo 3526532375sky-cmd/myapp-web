@@ -200,8 +200,8 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .leg-wrap{flex:1;min-width:160px;}
 .leg{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;}
 .leg .dot{width:11px;height:11px;border-radius:8px;flex:none;}
-.leg-name{flex:none;}
-.leg-v{flex:none;margin-left:auto;text-align:right;color:var(--text-2);font-variant-numeric:tabular-nums;}
+.leg-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.leg-v{flex:none;margin-left:auto;text-align:right;white-space:nowrap;color:var(--text-2);font-variant-numeric:tabular-nums;}
 .top-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;}
 .top-n{width:20px;height:20px;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none;}
 .top-c{flex:none;}
@@ -460,6 +460,8 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
   .mt-table{overflow:hidden;}
   .mt-row{grid-template-columns:44px 1fr 1fr 1fr;gap:8px;padding:8px 10px;}
 .mt-row span{white-space:nowrap;}
+  .donut{width:104px;height:104px;}
+  .donut-hole{width:60px;height:60px;font-size:12px;}
   .trend{overflow-x:auto;}
   
 }
