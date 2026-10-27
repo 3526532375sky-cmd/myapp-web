@@ -378,7 +378,7 @@ App.register('ledger', function(container){
   }
   function monthTableHtml(recs){
     var rows='<div class="mt-row mt-head"><span>月份</span><span>收入</span><span>支出</span><span>结余</span></div>';
-    for(var m=1;m<=12;m++){ var s=L.ledgerMonth(recs,year+'-'+(m<10?'0':'')+m); rows+='<div class="mt-row"><span>'+m+'月</span><span class="inc">'+fmtM(s.income)+'</span><span class="exp">'+fmtM(s.expense)+'</span><span class="'+(s.b>=0?'inc':'exp')+'">'+fmtM(s.balance)+'</span></div>'; }
+    for(var m=1;m<=12;m++){ var s=L.ledgerMonth(recs,year+'-'+(m<10?'0':'')+m); rows+='<div class="mt-row"><span>'+m+'月</span><span class="inc">'+fmtM(s.income)+'</span><span class="exp">'+fmtM(s.expense)+'</span><span class="inc">'+fmtM(s.balance)+'</span></div>'; }
     return '<div class="mt-table">'+rows+'</div>';
   }
 
