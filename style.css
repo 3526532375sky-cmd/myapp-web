@@ -194,7 +194,7 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .search-toggle.on{color:var(--accent);border-color:var(--accent);}
 .type-seg{margin-bottom:0;}
 /* —— 统计 / 年度 —— */
-.donut-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.donut-wrap{display:flex;align-items:center;gap:16px;}
 .donut{width:140px;height:140px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;}
 .donut-hole{width:86px;height:86px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;}
 .leg-wrap{flex:1;min-width:160px;}
