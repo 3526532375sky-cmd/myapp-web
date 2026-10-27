@@ -1,9 +1,9 @@
-/* modules/fitness.js —— 健身计划 */
+﻿/* modules/fitness.js —— 健身计划 */
 (function(){
 'use strict';
 var WK=['日','一','二','三','四','五','六'];
 var LABELS={1:'周一',2:'周二',3:'周三',4:'周四',5:'周五',6:'周六',0:'周日'};
-var WV={anchor:null,page:null,active:false}; // 周视图状态
+var WV={anchor:null,page:null,active:false,readonly:false,viewDays:null,viewName:''}; // 周视图状态
 function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function dose(it){ return (it.sets?it.sets+'组 × ':'')+App.esc(it.reps||'')+(it.weight?' × '+App.esc(it.weight):'')+(it.rest?' · 休 '+App.esc(it.rest):''); }
 function wvItems(day){
@@ -47,17 +47,25 @@ function weekNav(delta){
   if(next<mon) next=sun; else if(next>sun) next=mon;
   WV.page=next; renderWeekView();
 }
+function dayByDow(days, dow){
+  for(var i=0;i<(days||[]).length;i++){ if(days[i].dow===dow) return days[i]; }
+  return null;
+}
 function wvDayContent(dt){
   var L=App.Logic;
-  var day=L.fitnessDayFor(App.data.fitness.plan, dt);
   var dow=new Date(dt+'T00:00:00').getDay();
+  var day = WV.readonly ? dayByDow(WV.viewDays, dow) : L.fitnessDayFor(App.data.fitness.plan, dt);
   var content='';
   if(day){
     content='<div class="wv-head">'+LABELS[dow]+' · '+App.esc(day.focus)+(day.tag?' · '+App.esc(day.tag):'')+'</div>';
     if(day.kind==='strength'){
-      var prog=L.fitnessDayProgress(App.data.fitness.workouts, dt, day);
-      content+='<div class="sum-line">完成 '+prog.done+'/'+prog.total+'</div>';
-      if(dt<=L.todayStr()){ content+=wvCheck(day, prog); } else { content+=wvItems(day); }
+      if(WV.readonly){
+        content+=wvItems(day);
+      } else {
+        var prog=L.fitnessDayProgress(App.data.fitness.workouts, dt, day);
+        content+='<div class="sum-line">完成 '+prog.done+'/'+prog.total+'</div>';
+        if(dt<=L.todayStr()){ content+=wvCheck(day, prog); } else { content+=wvItems(day); }
+      }
     } else { content+=wvItems(day); }
   } else { content='<div class="placeholder">休息日 · 无安排</div>'; }
   return content;
@@ -69,8 +77,9 @@ function renderWeekView(){
     return '<button class="wv-tab'+(dt===WV.page?' on':'')+'" data-wv-date="'+dt+'">'+LABELS[dow]+'</button>';
   }).join('');
   var v=L.fitnessPlanVersion(App.data.fitness.plan, WV.page);
+  var title = WV.readonly ? ('历史计划 · '+(WV.viewName||'')) : ('本周训练 · '+(v&&v.name?v.name:''));
   var html='<div class="wv-nav">'+tabs+'</div><div class="wv-body" id="wvBody">'+wvDayContent(WV.page)+'</div><div class="wv-ctrl"><button class="mbtn ghost" id="wvPrev">↑ 上一天</button><button class="mbtn ghost" id="wvNext">下一天 ↓</button></div>';
-  App.openModal(html, { title:'本周训练 · '+(v&&v.name?v.name:''), saveText:'完成', onSave:function(close){ WV.active=false; close(); } });
+  App.openModal(html, { title:title, saveText: WV.readonly?'关闭':'完成', onSave:function(close){ WV.active=false; close(); } });
   bindWeekView();
 }
 function bindWeekView(){
@@ -91,7 +100,11 @@ function bindWeekView(){
     startY=null;
   }, {passive:true});
 }
-function showWeek(date){ WV.anchor=date||App.Logic.todayStr(); WV.page=WV.anchor; WV.active=true; renderWeekView(); }
+function showWeek(date){ WV.anchor=date||App.Logic.todayStr(); WV.page=WV.anchor; WV.active=true; WV.readonly=false; WV.viewDays=null; WV.viewName=''; renderWeekView(); }
+function showHistoryWeek(h){
+  if(!h || !h.days) return;
+  WV.anchor=h.from||App.Logic.todayStr(); WV.page=WV.anchor; WV.active=true; WV.readonly=true; WV.viewDays=h.days; WV.viewName=h.name||''; renderWeekView();
+}
 document.addEventListener('keydown', function(e){
   if(!WV.active) return;
   var m=document.getElementById('modal'); if(!m || m.classList.contains('hidden')) return;
@@ -270,7 +283,7 @@ App.register('fitness', function(container){
     html+='<div class="card"><h2>📅 本周安排 <span class="plan-name">'+App.esc(currentPlanName())+'</span>'+(selDate?' <span class="sum-line" style="font-size:12px;font-weight:400">（'+App.esc(selDate)+' 所在周）</span>':'')+' <button class="go" id="btnEditPlan" style="margin-left:auto">编辑计划</button></h2>'+weekRows(today, anchor)+'</div>';
     html+='<div class="card"><h2>🗓 锻炼日历 <span class="plan-name">'+App.esc(currentPlanName())+'</span></h2>'+calendarHtml(today)+'</div>';
     html+='</div>';
-    html+='<div class="card tips-card"><h2>🗓 当前阶段</h2><div class="sum-line">'+App.esc(plan.stage)+'</div><div class="sum-line">'+App.esc(plan.cycle)+'</div><p class="pre">'+App.esc(plan.goal)+'</p></div>';
+    html+='<div class="card tips-card"><h2>🗓 当前阶段</h2><div class="sum-line">'+App.esc(plan.stage)+'</div><div class="sum-line">'+App.esc(plan.cycle)+'</div><p class="pre">'+App.esc(plan.goal)+'</p><div class="sum-line">⚖️ 动态训练约 30% · 抗阻训练约 70%</div><div class="sum-line" style="color:var(--warning)">⚠️ 肱骨前移纠正期：标准俯卧撑已替换为上斜俯卧撑；肩部弹响伴疼痛/卡压/无力请就医评估</div></div>';
     html+=historyCard();
     html+=tipsCard('🍚 营养', plan.tips.nutrition);
     html+=tipsCard('😴 恢复', plan.tips.recovery);
@@ -281,7 +294,7 @@ App.register('fitness', function(container){
 
   function historyCard(){
     var p=App.data.fitness.plan||{}; var h=(p.history||[]).slice().reverse();
-    var items=h.map(function(x){ return '<div class="rec-row"><span class="cat">'+App.esc(x.name)+'</span><span class="note">'+App.esc(x.from)+' ~ '+App.esc(x.to||'至今')+'</span></div>'; }).join('');
+    var items=h.map(function(x,i){ return '<div class="rec-row"><span class="cat">'+App.esc(x.name)+'</span><span class="note">'+App.esc(x.from)+' ~ '+App.esc(x.to||'至今')+'</span><button class="hist-view" data-hist="'+i+'">查看</button></div>'; }).join('');
     return '<div class="card tips-card"><h2>🗂 历史计划</h2>'+(items||'<div class="placeholder">暂无历史计划。</div>')+'</div>';
   }
   function doseHtml(it){
@@ -458,6 +471,7 @@ App.register('fitness', function(container){
     var b=body.querySelector('#btnCompleteAll'); if(b) b.addEventListener('click', function(){ var d=L.fitnessDayFor(App.data.fitness.plan, L.todayStr()); if(d){ completeDay(d, L.todayStr()); render(); App.toast('今日已全部完成'); } });
     body.querySelectorAll('[data-item-idx]').forEach(function(cb){ cb.addEventListener('change', function(){ var d=L.fitnessDayFor(App.data.fitness.plan, L.todayStr()); if(d) toggleItem(d, L.todayStr(), parseInt(cb.getAttribute('data-item-idx'),10)); }); });
     var ep=body.querySelector('#btnEditPlan'); if(ep) ep.addEventListener('click', editPlan);
+    body.querySelectorAll('[data-hist]').forEach(function(b){ b.addEventListener('click', function(){ var idx=parseInt(b.getAttribute('data-hist'),10); var hp=(App.data.fitness.plan.history||[]).slice().reverse(); var h=hp[idx]; if(h) showHistoryWeek(h); }); });
     var cy=body.querySelector('#calYear'); if(cy) cy.addEventListener('change', function(){ calY=parseInt(cy.value,10); selDate=null; render(); });
     var cm=body.querySelector('#calMonth'); if(cm) cm.addEventListener('change', function(){ calM=parseInt(cm.value,10); selDate=null; render(); });
   }
@@ -477,7 +491,7 @@ App.register('fitness', function(container){
     App.openModal(
       '<div class="field"><label>计划名称</label><input class="input" id="epName" value="'+App.esc(name)+'"></div>'+
       '<div class="field"><label>生效日期</label><input class="input" id="epFrom" type="date" value="'+App.esc(from)+'"></div>'+
-      '<div class="sum-line" style="margin:4px 0 6px;font-weight:600">每天安排（点「编辑」修改某天）</div>'+rows,
+      '<button class="mbtn ghost" id="btnUseBuiltin" style="margin:6px 0 2px">↺ 套用内置推荐计划（去游泳 · 俯卧撑换上斜 · 加肩外旋纠正）</button>'+
       { title:'编辑计划', saveText:'保存并生效', onSave:function(close){
         var nn=document.getElementById('epName').value.trim(); if(!nn){App.toast('请填写计划名');return;}
         var nf=document.getElementById('epFrom').value||App.Logic.todayStr();
@@ -492,6 +506,7 @@ App.register('fitness', function(container){
     var box=document.getElementById('modal');
     if(!box) return;
     box.querySelectorAll('[data-ep-day]').forEach(function(b){ b.addEventListener('click', function(){ editDay(parseInt(b.getAttribute('data-ep-day'),10)); }); });
+    var ub=box.querySelector('#btnUseBuiltin'); if(ub) ub.addEventListener('click', function(){ editDraft=JSON.parse(JSON.stringify((App.Logic.FITNESS_PLAN&&App.Logic.FITNESS_PLAN.days)||[])); editPlan(); });
   }
 
   function editDay(dow){

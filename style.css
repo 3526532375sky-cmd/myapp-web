@@ -102,6 +102,7 @@ textarea.input{min-height:80px;resize:vertical;line-height:1.6;}
 .mini-item{display:flex;align-items:center;gap:8px;padding:8px 0;font-size:14px;border-bottom:1px solid var(--border);}
 .mini-item .del{margin-left:auto;}
 .go{display:inline-block;margin-top:8px;border:none;background:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:0;}
+.hist-view{flex:none;border:none;background:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:4px 6px;min-height:auto;}
 .memo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-l);padding:16px;margin-bottom:12px;box-shadow:var(--shadow-1);}
 .memo-card h2{margin:0 0 8px;font-size:14px;}
 .memo{margin:8px 0 0;}
