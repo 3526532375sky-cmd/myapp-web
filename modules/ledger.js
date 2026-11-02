@@ -415,7 +415,7 @@ App.register('ledger', function(container){
     }).join('');
 
     html += (rows || '<div class="card"><div class="placeholder">'+(finKind==='stock'?'暂无场内持仓。':'暂无场外基金。')+'</div></div>')+
-      '<div class="row" style="margin-top:8px"><button class="mbtn ghost" id="btnHoldAdd">＋ 添加持仓</button><button class="mbtn ghost" id="btnHoldImport" style="flex:none">粘贴导入</button></div>';
+      '<div class="row" style="margin:8px 0 12px"><button class="mbtn ghost" id="btnHoldAdd">＋ 添加持仓</button><button class="mbtn ghost" id="btnHoldImport" style="flex:none">粘贴导入</button></div>';
 
     html += '<div class="card"><h2>资讯与决策记录</h2>'+
       (notes.length ? notes.map(function(n){ return '<div class="rec-row"><span class="cat">'+App.esc(n.content)+'</span><span class="note">'+App.esc(n.date)+'</span><button class="del" data-fnote-del="'+n.id+'">✕</button></div>'; }).join('') : '<div class="placeholder">暂无记录。</div>')+
@@ -486,18 +486,27 @@ App.register('ledger', function(container){
           line = line.trim(); if(!line) return;
           var p = line.split(/[|\t]+/).map(function(s){ return s.trim(); });
           var isStock = (p[0]==='场内'||p[0]==='stock'||p[0]==='股票');
-          var obj;
+          var obj = null;
           if(isStock){
-            if(p.length < 6){ skipped++; return; }
-            var qty=parseFloat(p[3]), cp=parseFloat(p[4]), price=parseFloat(p[5]);
-            if(!p[1]||isNaN(qty)||qty<=0||isNaN(cp)||isNaN(price)){ skipped++; return; }
-            obj={kind:'stock', name:p[1], code:p[2]||'', qty:qty, costPrice:cp, price:price};
+            if(p.length >= 6){ obj = {kind:'stock', name:p[1], code:p[2]||'', qty:parseFloat(p[3]), costPrice:parseFloat(p[4]), price:parseFloat(p[5])}; }
+            else if(p.length >= 5){ obj = {kind:'stock', name:p[1], code:'', qty:parseFloat(p[2]), costPrice:parseFloat(p[3]), price:parseFloat(p[4])}; }
+            if(!obj || !obj.name || isNaN(obj.qty)||obj.qty<=0 || isNaN(obj.costPrice) || isNaN(obj.price)){ skipped++; return; }
           } else {
-            if(p.length < 5){ skipped++; return; }
-            var mv=parseFloat(p[3]), plv=parseFloat(p[4]);
-            if(!p[1]||isNaN(mv)){ skipped++; return; }
-            plv = isNaN(plv) ? 0 : plv;
-            obj={kind:'fund', name:p[1], code:p[2]||'', mv:mv, pl:plv, cost:mv-plv, updated:''};
+            if(p.length >= 6){
+              var sh=parseFloat(p[3]), nv=parseFloat(p[4]), c6=parseFloat(p[5]);
+              if(!p[1]||isNaN(sh)||isNaN(nv)||isNaN(c6)){ skipped++; return; }
+              obj={kind:'fund', name:p[1], code:p[2]||'', shares:sh, nav:nv, cost:c6, updated:''};
+            } else if(p.length >= 5){
+              var mv5=parseFloat(p[3]), pl5=parseFloat(p[4]);
+              if(!p[1]||isNaN(mv5)){ skipped++; return; }
+              pl5=isNaN(pl5)?0:pl5;
+              obj={kind:'fund', name:p[1], code:p[2]||'', mv:mv5, pl:pl5, cost:mv5-pl5, updated:''};
+            } else if(p.length >= 4){
+              var mv4=parseFloat(p[2]), pl4=parseFloat(p[3]);
+              if(!p[1]||isNaN(mv4)){ skipped++; return; }
+              pl4=isNaN(pl4)?0:pl4;
+              obj={kind:'fund', name:p[1], code:'', mv:mv4, pl:pl4, cost:mv4-pl4, updated:''};
+            } else { skipped++; return; }
           }
           obj.id = 'h'+Date.now()+Math.random().toString(36).slice(2,6);
           hs.push(obj); added++;
