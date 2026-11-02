@@ -1,4 +1,4 @@
-﻿/* ============ 设计 tokens（v2）============ */
+/* ============ 设计 tokens（v2）============ */
 :root{ color-scheme:light dark;
   --bg:#f6f7f9; --surface:#ffffff; --surface-2:#f1f3f6;
   --text:#1f2430; --text-2:#6b7280; --text-3:#9aa1ad;
@@ -471,3 +471,20 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
 .pager-viewport{overflow:hidden;}
 .pager-strip{display:flex;align-items:flex-start;transform:translateX(0);will-change:transform;}
 .pager-page{flex:1 0 0;min-width:0;box-sizing:border-box;padding:0 4px;}
+
+/* 金融模块：场外基金 / 场内持仓 */
+.fin-stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.fin-stat .stat-item{box-shadow:none;}
+.fin-stat .sv{font-size:17px;}
+.holding{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;}
+.holding .h-r1{display:flex;align-items:flex-start;gap:8px;}
+.holding .h-nm{flex:1;min-width:0;font-size:15px;font-weight:600;}
+.holding .h-code{font-size:12px;color:var(--text-3);margin-top:2px;font-variant-numeric:tabular-nums;}
+.holding .h-tag{flex:none;font-size:11px;color:var(--accent);background:rgba(96,165,250,.14);border-radius:999px;padding:2px 8px;white-space:nowrap;}
+.holding .h-r2{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:10px;min-width:0;}
+.holding .h-mv{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.holding .h-pl{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.holding .h-r3{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:12px;color:var(--text-2);}
+.holding .h-r3 span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.holding .h-acts{display:flex;justify-content:flex-end;gap:14px;margin-top:8px;}
+.holding .h-acts .go{margin:0;min-height:0;}

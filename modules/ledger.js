@@ -1,4 +1,4 @@
-﻿/* modules/ledger.js —— 账本 */
+/* modules/ledger.js —— 账本 */
 (function(){
 'use strict';
 var sub = 'flow'; // 模块级：离开账本再回来保留，重启重置为流水
@@ -6,6 +6,7 @@ App.register('ledger', function(container){
   var L = App.Logic;
   var filter = 'all', query = '', openMonths = {};
   var editingId = null, editingBase = 0;
+  var finKind = 'fund';
 
   var EMO = {餐饮:'🍚',交通:'🚌',购物:'🛒',居住:'🏠',水电燃气:'💡',娱乐:'🎮',医疗:'💊',教育:'📚',通讯:'📱',人情:'🎁',日用:'🧻',服饰:'👕',美容美发:'💇',运动:'⚽',宠物:'🐶',旅行:'✈️',烟酒:'🚬',保险:'🛡️',其他:'📦',工资:'💰',奖金:'🧧',理财:'📈',兼职:'💼',红包:'🧧',报销:'🧾',礼金:'🎁',退款:'↩️',二手:'🔄'};
   function emojiFor(c){ return EMO[c] || '🏷️'; }
@@ -145,6 +146,7 @@ App.register('ledger', function(container){
     }
     body = pg('fin');
     if(body){
+      var fk = body.querySelector('#finKind'); if(fk) fk.addEventListener('click', function(e){ var b=e.target.closest('button[data-fk]'); if(!b)return; finKind=b.getAttribute('data-fk'); render(); });
       var ha = body.querySelector('#btnHoldAdd'); if(ha) ha.addEventListener('click', function(){ openHoldingModal(null); });
       body.querySelectorAll('[data-hold-edit]').forEach(function(b){ b.addEventListener('click', function(){ openHoldingModal(b.getAttribute('data-hold-edit')); }); });
       body.querySelectorAll('[data-hold-del]').forEach(function(b){ b.addEventListener('click', function(){ delHolding(b.getAttribute('data-hold-del')); }); });
@@ -387,35 +389,83 @@ App.register('ledger', function(container){
     var hs = App.data.ledger.settings.holdings || [];
     var sum = L.holdingsSummary(hs);
     var notes = (App.data.ledger.settings.financeNotes||[]).slice().reverse();
-    var h = '<div class="card"><h2>持仓跟踪</h2><div class="stat3">'+
+    function isStockH(h){ return h.kind==='stock' || (h.kind==null && h.qty!=null); }
+    var list = hs.map(function(h,i){ var c=L.holdingCalc(h); return {h:h, i:i, mv:c.mv, pl:c.pl, pct:c.pct}; })
+      .filter(function(x){ return finKind==='stock' ? isStockH(x.h) : !isStockH(x.h); })
+      .sort(function(a,b){ return b.mv - a.mv; });
+
+    var html = '<div class="card"><h2>资产总览</h2><div class="fin-stat">'+
       '<div class="stat-item"><div class="sl">总市值</div><div class="sv">'+L.fmtMoney(sum.mv)+'</div></div>'+
-      '<div class="stat-item"><div class="sl">总成本</div><div class="sv">'+L.fmtMoney(sum.cost)+'</div></div>'+
-      '<div class="stat-item"><div class="sl">浮动盈亏</div><div class="sv '+(sum.pl<0?'exp':'inc')+'">'+L.fmtMoney(sum.pl)+' ('+(sum.pl>=0?'+':'')+sum.pct+'%)</div></div>'+
-      '</div>'+
-      (hs.length ? hs.map(function(hh,i){ var mv=Number(hh.qty)*Number(hh.price), c=Number(hh.qty)*Number(hh.cost), p=mv-c, pc=c?Math.round(p/c*100):0; return '<div class="rec-row"><span class="cat">'+App.esc(hh.name)+(hh.code?' <small>'+App.esc(hh.code)+'</small>':'')+'</span><span class="amt '+(p<0?'exp':'inc')+'">'+L.fmtMoney(p)+'</span><button class="del" data-hold-edit="'+i+'">改</button><button class="del" data-hold-del="'+i+'">✕</button></div>'; }).join('') : '<div class="placeholder">暂无持仓，点下方添加。</div>')+
-      '<button class="mbtn ghost" id="btnHoldAdd" style="margin-top:8px">＋ 添加持仓</button></div>';
-    h += '<div class="card"><h2>资讯与决策记录</h2>'+
+      '<div class="stat-item"><div class="sl">累计成本</div><div class="sv">'+L.fmtMoney(sum.cost)+'</div></div>'+
+      '<div class="stat-item"><div class="sl">累计收益</div><div class="sv '+(sum.pl<0?'exp':'inc')+'">'+L.fmtMoney(sum.pl)+'</div></div>'+
+      '<div class="stat-item"><div class="sl">累计收益率</div><div class="sv '+(sum.pl<0?'exp':'inc')+'">'+(sum.pl>=0?'+':'')+sum.pct+'%</div></div>'+
+      '</div></div>';
+
+    html += '<div class="seg2" id="finKind"><button data-fk="fund" class="'+(finKind==='fund'?'on':'')+'">场外基金</button><button data-fk="stock" class="'+(finKind==='stock'?'on':'')+'">场内</button></div>';
+
+    var rows = list.map(function(x){
+      var h=x.h, s=isStockH(h);
+      var sub = s ? ('数量 '+App.esc(h.qty)+' × 现价 '+App.esc(h.price)) : ('份额 '+App.esc(h.shares)+' × 净值 '+App.esc(h.nav));
+      var costTxt = s ? (Number(h.qty||0)*Number(h.costPrice!=null?h.costPrice:h.cost||0)) : Number(h.cost||0);
+      return '<div class="holding"><div class="h-r1"><div class="h-nm">'+App.esc(h.name)+'<div class="h-code">'+App.esc(h.code||'')+'</div></div><span class="h-tag">'+(s?'场内':'场外')+'</span></div>'+
+        '<div class="h-r2"><span class="h-mv">'+L.fmtMoney(x.mv)+'</span><span class="h-pl '+(x.pl<0?'exp':'inc')+'">'+(x.pl>=0?'+':'')+L.fmtMoney(x.pl)+' · '+(x.pl>=0?'+':'')+x.pct+'%</span></div>'+
+        '<div class="h-r3"><span>'+sub+'</span><span>成本 '+L.fmtMoney(costTxt)+'</span></div>'+
+        '<div class="h-acts"><button class="go" data-hold-edit="'+x.i+'">编辑</button><button class="del" data-hold-del="'+x.i+'">删除</button></div></div>';
+    }).join('');
+
+    html += (rows || '<div class="card"><div class="placeholder">'+(finKind==='stock'?'暂无场内持仓。':'暂无场外基金。')+'</div></div>')+
+      '<button class="mbtn ghost" id="btnHoldAdd" style="margin-top:8px">＋ 添加持仓</button>';
+
+    html += '<div class="card"><h2>资讯与决策记录</h2>'+
       (notes.length ? notes.map(function(n){ return '<div class="rec-row"><span class="cat">'+App.esc(n.content)+'</span><span class="note">'+App.esc(n.date)+'</span><button class="del" data-fnote-del="'+n.id+'">✕</button></div>'; }).join('') : '<div class="placeholder">暂无记录。</div>')+
       '<div class="row" style="margin-top:8px"><input class="input" id="finNoteInput" placeholder="记录官方/权威数据、新闻及决策…"></div>'+
       '<button class="mbtn ghost" id="btnFinNoteAdd" style="margin-top:8px">添加记录</button></div>';
-    return h;
+    return html;
   }
   function openHoldingModal(idx){
     var hs = App.data.ledger.settings.holdings || [];
     var h = idx!=null ? hs[parseInt(idx,10)] : null;
+    var curKind = h ? ((h.kind==='stock' || (h.kind==null && h.qty!=null)) ? 'stock' : 'fund') : 'fund';
+    function fields(k){
+      var name = h?App.esc(h.name||''):'', code = h?App.esc(h.code||''):'';
+      if(k==='stock'){
+        return '<div class="field"><label>名称 / 标的</label><input class="input" id="hName" value="'+name+'" placeholder="如 沪深300ETF"></div>'+
+          '<div class="field"><label>代码（可选）</label><input class="input" id="hCode" value="'+code+'"></div>'+
+          '<div class="row"><div class="field"><label>数量</label><input class="input" id="hQty" inputmode="decimal" value="'+(h?App.esc(h.qty||''):'')+'"></div><div class="field"><label>成本价</label><input class="input" id="hCostPrice" inputmode="decimal" value="'+(h?App.esc(h.costPrice!=null?h.costPrice:h.cost||''):'')+'"></div></div>'+
+          '<div class="field"><label>现价</label><input class="input" id="hPrice" inputmode="decimal" value="'+(h?App.esc(h.price||''):'')+'"></div>';
+      }
+      return '<div class="field"><label>基金名称</label><input class="input" id="hName" value="'+name+'" placeholder="如 易方达蓝筹精选混合"></div>'+
+        '<div class="field"><label>基金代码</label><input class="input" id="hCode" value="'+code+'" placeholder="6 位数字"></div>'+
+        '<div class="row"><div class="field"><label>持有份额（份）</label><input class="input" id="hShares" inputmode="decimal" value="'+(h?App.esc(h.shares||''):'')+'"></div><div class="field"><label>最新净值（元）</label><input class="input" id="hNav" inputmode="decimal" value="'+(h?App.esc(h.nav||''):'')+'"></div></div>'+
+        '<div class="row"><div class="field"><label>持仓成本（本金）</label><input class="input" id="hCost" inputmode="decimal" value="'+(h?App.esc(h.cost||''):'')+'"></div><div class="field"><label>净值日期（可选）</label><input class="input" id="hUpdated" value="'+(h?App.esc(h.updated||''):'')+'" placeholder="2026-11-01"></div></div>';
+    }
     App.openModal(
-      '<div class="field"><label>名称 / 标的</label><input class="input" id="hName" value="'+(h?App.esc(h.name):'')+'" placeholder="如 沪深300ETF"></div>'+
-      '<div class="field"><label>代码（可选）</label><input class="input" id="hCode" value="'+(h?App.esc(h.code||''):'')+'"></div>'+
-      '<div class="row"><div class="field"><label>数量</label><input class="input" id="hQty" inputmode="decimal" value="'+(h?h.qty:'')+'"></div><div class="field"><label>成本价</label><input class="input" id="hCost" inputmode="decimal" value="'+(h?h.cost:'')+'"></div></div>'+
-      '<div class="field"><label>现价</label><input class="input" id="hPrice" inputmode="decimal" value="'+(h?h.price:'')+'"></div>',
+      '<div class="field"><label>类型</label><div class="seg2 type-seg" id="holdKind"><button type="button" data-hk="fund" class="'+(curKind==='fund'?'on':'')+'">场外基金</button><button type="button" data-hk="stock" class="'+(curKind==='stock'?'on':'')+'">场内</button></div></div>'+
+      '<div id="holdFields">'+fields(curKind)+'</div>',
       { title:h?'编辑持仓':'添加持仓', saveText:'保存', onSave:function(close){
-        var name=document.getElementById('hName').value.trim(), qty=parseFloat(document.getElementById('hQty').value), cost=parseFloat(document.getElementById('hCost').value), price=parseFloat(document.getElementById('hPrice').value);
-        if(!name||isNaN(qty)||qty<=0||isNaN(cost)||cost<0||isNaN(price)||price<0){ App.toast('请正确填写'); return; }
-        var obj={name:name, code:document.getElementById('hCode').value.trim(), qty:qty, cost:cost, price:price};
+        var name=document.getElementById('hName').value.trim();
+        if(!name){ App.toast('请填写名称'); return; }
+        var obj={kind:curKind, name:name, code:document.getElementById('hCode').value.trim()};
+        if(curKind==='stock'){
+          var qty=parseFloat(document.getElementById('hQty').value), cp=parseFloat(document.getElementById('hCostPrice').value), price=parseFloat(document.getElementById('hPrice').value);
+          if(isNaN(qty)||qty<=0||isNaN(cp)||cp<0||isNaN(price)||price<0){ App.toast('请正确填写数量/成本价/现价'); return; }
+          obj.qty=qty; obj.costPrice=cp; obj.price=price;
+        } else {
+          var shares=parseFloat(document.getElementById('hShares').value), nav=parseFloat(document.getElementById('hNav').value), cost=parseFloat(document.getElementById('hCost').value);
+          if(isNaN(shares)||shares<=0||isNaN(nav)||nav<=0||isNaN(cost)||cost<0){ App.toast('请正确填写份额/净值/成本'); return; }
+          obj.shares=shares; obj.nav=nav; obj.cost=cost; obj.updated=document.getElementById('hUpdated').value.trim();
+        }
         if(idx!=null){ hs[parseInt(idx,10)] = Object.assign({}, hs[parseInt(idx,10)], obj); } else { obj.id='h'+Date.now(); hs.push(obj); }
         App.data.ledger.settings.holdings = hs; App.setData(App.data); close(); render(); App.toast('已保存');
       }}
     );
+    var seg = document.getElementById('holdKind');
+    seg.addEventListener('click', function(e){
+      var b = e.target.closest('button[data-hk]'); if(!b) return;
+      curKind = b.getAttribute('data-hk');
+      seg.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); });
+      document.getElementById('holdFields').innerHTML = fields(curKind);
+    });
   }
   function delHolding(idx){ App.confirm('删除该持仓？', function(){ var hs=App.data.ledger.settings.holdings||[]; hs.splice(parseInt(idx,10),1); App.setData(App.data); render(); }); }
   function addFinNote(){ var v=document.getElementById('finNoteInput').value.trim(); if(!v){App.toast('请输入内容');return;} var n=App.data.ledger.settings.financeNotes||[]; n.push({id:'n'+Date.now(),date:L.todayStr(),content:v}); App.data.ledger.settings.financeNotes=n; App.setData(App.data); render(); App.toast('已记录'); }

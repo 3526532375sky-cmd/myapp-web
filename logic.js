@@ -1,4 +1,4 @@
-﻿/* logic.js —— 纯逻辑层（浏览器与 Node 通用，可单元测试） */
+/* logic.js —— 纯逻辑层（浏览器与 Node 通用，可单元测试） */
 (function (root, factory) {
   var api = factory();
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -78,14 +78,28 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     return (workouts||[]).some(function(w){ return w.date === date; });
   }
 
+  function holdingCalc(h){
+    var isStock = (h.kind === 'stock') || (h.kind == null && h.qty != null);
+    var mv, cost;
+    if(isStock){
+      var q = Number(h.qty)||0, cp = Number(h.costPrice != null ? h.costPrice : h.cost)||0, p = Number(h.price)||0;
+      cost = q*cp; mv = q*p;
+    } else {
+      var s = Number(h.shares)||0, nav = Number(h.nav)||0, c = Number(h.cost)||0;
+      cost = c; mv = s*nav;
+    }
+    var pl = mv - cost;
+    var pct = cost > 0 ? Math.round(pl/cost*10000)/100 : 0;
+    return { cost: cost, mv: mv, pl: pl, pct: pct };
+  }
   function holdingsSummary(holdings){
     var cost=0, mv=0;
     (holdings||[]).forEach(function(h){
-      cost += (Number(h.qty)||0)*(Number(h.cost)||0);
-      mv += (Number(h.qty)||0)*(Number(h.price)||0);
+      var c = holdingCalc(h);
+      cost += c.cost; mv += c.mv;
     });
     var pl = mv - cost;
-    var pct = cost > 0 ? Math.round(pl/cost*100) : 0;
+    var pct = cost > 0 ? Math.round(pl/cost*10000)/100 : 0;
     return { cost: cost, mv: mv, pl: pl, pct: pct };
   }
 
@@ -346,6 +360,7 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     studyOpenGoals: studyOpenGoals,
     fitnessDidWorkout: fitnessDidWorkout,
     holdingsSummary: holdingsSummary,
+    holdingCalc: holdingCalc,
     upcomingBills: upcomingBills,
     homeActions: homeActions,
     sm2Review: sm2Review,
