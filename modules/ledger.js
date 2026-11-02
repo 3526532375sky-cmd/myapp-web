@@ -406,7 +406,7 @@ App.register('ledger', function(container){
 
     var rows = list.map(function(x){
       var h=x.h, s=isStockH(h);
-      var sub = s ? ('数量 '+App.esc(h.qty)+' × 现价 '+App.esc(h.price)) : ('份额 '+App.esc(h.shares)+' × 净值 '+App.esc(h.nav));
+      var sub = s ? ('数量 '+App.esc(h.qty)+' × 现价 '+App.esc(h.price)) : ((h.shares!=null && h.nav!=null) ? ('份额 '+App.esc(h.shares)+' × 净值 '+App.esc(h.nav)) : '按市值录入');
       var costTxt = s ? (Number(h.qty||0)*Number(h.costPrice!=null?h.costPrice:h.cost||0)) : Number(h.cost||0);
       return '<div class="holding"><div class="h-r1"><div class="h-nm">'+App.esc(h.name)+'<div class="h-code">'+App.esc(h.code||'')+'</div></div><span class="h-tag">'+(s?'场内':'场外')+'</span></div>'+
         '<div class="h-r2"><span class="h-mv">'+L.fmtMoney(x.mv)+'</span><span class="h-pl '+(x.pl<0?'exp':'inc')+'">'+(x.pl>=0?'+':'')+L.fmtMoney(x.pl)+' · '+(x.pl>=0?'+':'')+x.pct+'%</span></div>'+
@@ -435,10 +435,12 @@ App.register('ledger', function(container){
           '<div class="row"><div class="field"><label>数量</label><input class="input" id="hQty" inputmode="decimal" value="'+(h?App.esc(h.qty||''):'')+'"></div><div class="field"><label>成本价</label><input class="input" id="hCostPrice" inputmode="decimal" value="'+(h?App.esc(h.costPrice!=null?h.costPrice:h.cost||''):'')+'"></div></div>'+
           '<div class="field"><label>现价</label><input class="input" id="hPrice" inputmode="decimal" value="'+(h?App.esc(h.price||''):'')+'"></div>';
       }
+      var hMv = h ? (h.mv!=null ? h.mv : (Number(h.shares||0)*Number(h.nav||0))) : '';
+      var hPl = h ? (h.pl!=null ? h.pl : (Number(hMv||0) - Number(h.cost||0))) : '';
       return '<div class="field"><label>基金名称</label><input class="input" id="hName" value="'+name+'" placeholder="如 易方达蓝筹精选混合"></div>'+
-        '<div class="field"><label>基金代码</label><input class="input" id="hCode" value="'+code+'" placeholder="6 位数字"></div>'+
-        '<div class="row"><div class="field"><label>持有份额（份）</label><input class="input" id="hShares" inputmode="decimal" value="'+(h?App.esc(h.shares||''):'')+'"></div><div class="field"><label>最新净值（元）</label><input class="input" id="hNav" inputmode="decimal" value="'+(h?App.esc(h.nav||''):'')+'"></div></div>'+
-        '<div class="row"><div class="field"><label>持仓成本（本金）</label><input class="input" id="hCost" inputmode="decimal" value="'+(h?App.esc(h.cost||''):'')+'"></div><div class="field"><label>净值日期（可选）</label><input class="input" id="hUpdated" value="'+(h?App.esc(h.updated||''):'')+'" placeholder="2026-11-01"></div></div>';
+        '<div class="field"><label>基金代码（可选）</label><input class="input" id="hCode" value="'+code+'" placeholder="6 位数字"></div>'+
+        '<div class="row"><div class="field"><label>持有市值（元）</label><input class="input" id="hMv" inputmode="decimal" value="'+(hMv===''?'':App.esc(hMv))+'"></div><div class="field"><label>持仓收益（元）</label><input class="input" id="hPl" inputmode="decimal" value="'+(hPl===''?'':App.esc(hPl))+'"></div></div>'+
+        '<div class="row"><div class="field"><label>持有份额（可选）</label><input class="input" id="hShares" inputmode="decimal" value="'+(h?App.esc(h.shares||''):'')+'"></div><div class="field"><label>最新净值（可选）</label><input class="input" id="hNav" inputmode="decimal" value="'+(h?App.esc(h.nav||''):'')+'"></div></div>';
     }
     App.openModal(
       '<div class="field"><label>类型</label><div class="seg2 type-seg" id="holdKind"><button type="button" data-hk="fund" class="'+(curKind==='fund'?'on':'')+'">场外基金</button><button type="button" data-hk="stock" class="'+(curKind==='stock'?'on':'')+'">场内</button></div></div>'+
@@ -452,9 +454,12 @@ App.register('ledger', function(container){
           if(isNaN(qty)||qty<=0||isNaN(cp)||cp<0||isNaN(price)||price<0){ App.toast('请正确填写数量/成本价/现价'); return; }
           obj.qty=qty; obj.costPrice=cp; obj.price=price;
         } else {
-          var shares=parseFloat(document.getElementById('hShares').value), nav=parseFloat(document.getElementById('hNav').value), cost=parseFloat(document.getElementById('hCost').value);
-          if(isNaN(shares)||shares<=0||isNaN(nav)||nav<=0||isNaN(cost)||cost<0){ App.toast('请正确填写份额/净值/成本'); return; }
-          obj.shares=shares; obj.nav=nav; obj.cost=cost; obj.updated=document.getElementById('hUpdated').value.trim();
+          var mv=parseFloat(document.getElementById('hMv').value), plv=parseFloat(document.getElementById('hPl').value);
+          if(isNaN(mv)||mv<0||isNaN(plv)){ App.toast('请填写持有市值与持仓收益'); return; }
+          obj.mv=mv; obj.pl=plv; obj.cost=mv-plv;
+          var sh=parseFloat(document.getElementById('hShares').value), nv=parseFloat(document.getElementById('hNav').value);
+          if(!isNaN(sh)) obj.shares=sh;
+          if(!isNaN(nv)) obj.nav=nv;
         }
         if(idx!=null){ hs[parseInt(idx,10)] = Object.assign({}, hs[parseInt(idx,10)], obj); } else { obj.id='h'+Date.now(); hs.push(obj); }
         App.data.ledger.settings.holdings = hs; App.setData(App.data); close(); render(); App.toast('已保存');
@@ -471,7 +476,7 @@ App.register('ledger', function(container){
   function delHolding(idx){ App.confirm('删除该持仓？', function(){ var hs=App.data.ledger.settings.holdings||[]; hs.splice(parseInt(idx,10),1); App.setData(App.data); render(); }); }
   function importHoldings(){
     App.openModal(
-      '<div class="field"><label>粘贴导入</label><textarea class="input" id="holdImport" style="min-height:140px" placeholder="每行一个持仓，字段用 | 分隔：&#10;场外|名称|代码|份额|净值|成本&#10;场内|名称|代码|数量|成本价|现价"></textarea></div>',
+      '<div class="field"><label>粘贴导入</label><textarea class="input" id="holdImport" style="min-height:140px" placeholder="每行一个持仓，字段用 | 分隔：&#10;场外|名称|代码|市值|收益&#10;场内|名称|代码|数量|成本价|现价"></textarea></div>',
       { title:'粘贴导入持仓', saveText:'导入', onSave:function(close){
         var txt = document.getElementById('holdImport').value.trim();
         if(!txt){ App.toast('请粘贴内容'); return; }
@@ -480,13 +485,20 @@ App.register('ledger', function(container){
         txt.split('\n').forEach(function(line){
           line = line.trim(); if(!line) return;
           var p = line.split(/[|\t]+/).map(function(s){ return s.trim(); });
-          if(p.length < 6){ skipped++; return; }
           var isStock = (p[0]==='场内'||p[0]==='stock'||p[0]==='股票');
-          var a=parseFloat(p[3]), b=parseFloat(p[4]), cnum=parseFloat(p[5]);
-          if(!p[1]||isNaN(a)||isNaN(b)||isNaN(cnum)){ skipped++; return; }
-          var obj = isStock
-            ? {kind:'stock', name:p[1], code:p[2]||'', qty:a, costPrice:b, price:cnum}
-            : {kind:'fund', name:p[1], code:p[2]||'', shares:a, nav:b, cost:cnum, updated:''};
+          var obj;
+          if(isStock){
+            if(p.length < 6){ skipped++; return; }
+            var qty=parseFloat(p[3]), cp=parseFloat(p[4]), price=parseFloat(p[5]);
+            if(!p[1]||isNaN(qty)||qty<=0||isNaN(cp)||isNaN(price)){ skipped++; return; }
+            obj={kind:'stock', name:p[1], code:p[2]||'', qty:qty, costPrice:cp, price:price};
+          } else {
+            if(p.length < 5){ skipped++; return; }
+            var mv=parseFloat(p[3]), plv=parseFloat(p[4]);
+            if(!p[1]||isNaN(mv)){ skipped++; return; }
+            plv = isNaN(plv) ? 0 : plv;
+            obj={kind:'fund', name:p[1], code:p[2]||'', mv:mv, pl:plv, cost:mv-plv, updated:''};
+          }
           obj.id = 'h'+Date.now()+Math.random().toString(36).slice(2,6);
           hs.push(obj); added++;
         });

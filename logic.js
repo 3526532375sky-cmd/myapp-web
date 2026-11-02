@@ -85,8 +85,10 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
       var q = Number(h.qty)||0, cp = Number(h.costPrice != null ? h.costPrice : h.cost)||0, p = Number(h.price)||0;
       cost = q*cp; mv = q*p;
     } else {
-      var s = Number(h.shares)||0, nav = Number(h.nav)||0, c = Number(h.cost)||0;
-      cost = c; mv = s*nav;
+      var s = Number(h.shares)||0, nav = Number(h.nav)||0;
+      mv = (h.mv != null) ? (Number(h.mv)||0) : s*nav;
+      if(h.cost != null && !isNaN(Number(h.cost))){ cost = Number(h.cost); }
+      else { cost = mv - (Number(h.pl)||0); }
     }
     var pl = mv - cost;
     var pct = cost > 0 ? Math.round(pl/cost*10000)/100 : 0;
