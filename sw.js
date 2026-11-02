@@ -1,5 +1,5 @@
 /* sw.js —— PWA 静态资源缓存（不缓存数据 / 同步接口） */
-var CACHE = 'myapp-shell-v1';
+var CACHE = 'myapp-shell-v2';
 var ASSETS = [
   './', './index.html', './style.css', './logic.js', './crypto.js', './sync.js', './app.js',
   './icon.svg', './manifest.json',
