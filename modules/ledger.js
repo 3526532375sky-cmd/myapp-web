@@ -148,6 +148,7 @@ App.register('ledger', function(container){
     if(body){
       var fk = body.querySelector('#finKind'); if(fk) fk.addEventListener('click', function(e){ var b=e.target.closest('button[data-fk]'); if(!b)return; finKind=b.getAttribute('data-fk'); render(); });
       var ha = body.querySelector('#btnHoldAdd'); if(ha) ha.addEventListener('click', function(){ openHoldingModal(null); });
+      var hi = body.querySelector('#btnHoldImport'); if(hi) hi.addEventListener('click', importHoldings);
       body.querySelectorAll('[data-hold-edit]').forEach(function(b){ b.addEventListener('click', function(){ openHoldingModal(b.getAttribute('data-hold-edit')); }); });
       body.querySelectorAll('[data-hold-del]').forEach(function(b){ b.addEventListener('click', function(){ delHolding(b.getAttribute('data-hold-del')); }); });
       var na = body.querySelector('#btnFinNoteAdd'); if(na) na.addEventListener('click', addFinNote);
@@ -414,7 +415,7 @@ App.register('ledger', function(container){
     }).join('');
 
     html += (rows || '<div class="card"><div class="placeholder">'+(finKind==='stock'?'暂无场内持仓。':'暂无场外基金。')+'</div></div>')+
-      '<button class="mbtn ghost" id="btnHoldAdd" style="margin-top:8px">＋ 添加持仓</button>';
+      '<div class="row" style="margin-top:8px"><button class="mbtn ghost" id="btnHoldAdd">＋ 添加持仓</button><button class="mbtn ghost" id="btnHoldImport" style="flex:none">粘贴导入</button></div>';
 
     html += '<div class="card"><h2>资讯与决策记录</h2>'+
       (notes.length ? notes.map(function(n){ return '<div class="rec-row"><span class="cat">'+App.esc(n.content)+'</span><span class="note">'+App.esc(n.date)+'</span><button class="del" data-fnote-del="'+n.id+'">✕</button></div>'; }).join('') : '<div class="placeholder">暂无记录。</div>')+
@@ -468,6 +469,33 @@ App.register('ledger', function(container){
     });
   }
   function delHolding(idx){ App.confirm('删除该持仓？', function(){ var hs=App.data.ledger.settings.holdings||[]; hs.splice(parseInt(idx,10),1); App.setData(App.data); render(); }); }
+  function importHoldings(){
+    App.openModal(
+      '<div class="field"><label>粘贴导入</label><textarea class="input" id="holdImport" style="min-height:140px" placeholder="每行一个持仓，字段用 | 分隔：&#10;场外|名称|代码|份额|净值|成本&#10;场内|名称|代码|数量|成本价|现价"></textarea></div>',
+      { title:'粘贴导入持仓', saveText:'导入', onSave:function(close){
+        var txt = document.getElementById('holdImport').value.trim();
+        if(!txt){ App.toast('请粘贴内容'); return; }
+        var hs = App.data.ledger.settings.holdings || [];
+        var added=0, skipped=0;
+        txt.split('\n').forEach(function(line){
+          line = line.trim(); if(!line) return;
+          var p = line.split(/[|\t]+/).map(function(s){ return s.trim(); });
+          if(p.length < 6){ skipped++; return; }
+          var isStock = (p[0]==='场内'||p[0]==='stock'||p[0]==='股票');
+          var a=parseFloat(p[3]), b=parseFloat(p[4]), cnum=parseFloat(p[5]);
+          if(!p[1]||isNaN(a)||isNaN(b)||isNaN(cnum)){ skipped++; return; }
+          var obj = isStock
+            ? {kind:'stock', name:p[1], code:p[2]||'', qty:a, costPrice:b, price:cnum}
+            : {kind:'fund', name:p[1], code:p[2]||'', shares:a, nav:b, cost:cnum, updated:''};
+          obj.id = 'h'+Date.now()+Math.random().toString(36).slice(2,6);
+          hs.push(obj); added++;
+        });
+        App.data.ledger.settings.holdings = hs;
+        App.setData(App.data); close(); render();
+        App.toast('已导入 '+added+' 条'+(skipped?'，跳过 '+skipped+' 条':''));
+      }}
+    );
+  }
   function addFinNote(){ var v=document.getElementById('finNoteInput').value.trim(); if(!v){App.toast('请输入内容');return;} var n=App.data.ledger.settings.financeNotes||[]; n.push({id:'n'+Date.now(),date:L.todayStr(),content:v}); App.data.ledger.settings.financeNotes=n; App.setData(App.data); render(); App.toast('已记录'); }
   function delFinNote(id){ App.deleteWithUndo({ apply:function(){ var n=(App.data.ledger.settings.financeNotes||[]).filter(function(x){return x.id!==id;}); App.data.ledger.settings.financeNotes=n; }, render:render }); }
 

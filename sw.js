@@ -20,5 +20,11 @@ self.addEventListener('fetch', function(e){
   if(url.pathname.endsWith('/api/data')) return;      // 数据接口：不缓存
   if(url.origin !== self.location.origin) return;      // 跨域（GitHub API 等）：不拦截
   if(e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then(function(hit){ return hit || fetch(e.request); }));
+  e.respondWith(
+    fetch(e.request).then(function(res){
+      var copy = res.clone();
+      caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
+      return res;
+    }).catch(function(){ return caches.match(e.request); })
+  );
 });
