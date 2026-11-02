@@ -1,4 +1,4 @@
-﻿/* app.js —— 核心：数据、加密、密码、路由、通用组件 */
+/* app.js —— 核心：数据、加密、密码、路由、通用组件 */
 (function(){
 'use strict';
 
@@ -231,6 +231,14 @@ function renderView(){
   syncPagerHeight();
 }
 
+function downloadBackup(raw, prefix){
+  var d = new Date();
+  var name = (prefix||'备份-') + d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.appdata';
+  var blob = new Blob([raw], {type:'application/octet-stream'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
 // ===== 对外 API =====
 window.App = {
   get data(){ return data; },
@@ -245,13 +253,9 @@ window.App = {
   applyTheme: applyTheme,
   activeModule: function(){ return active; },
   exportBackup: function(){
-    return fetchData().then(function(raw){
+    return loadData().then(function(raw){
       if(!raw){ toast('暂无数据'); return false; }
-      var d = new Date();
-      var name = '备份-' + d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.appdata';
-      var blob = new Blob([raw], {type:'application/octet-stream'});
-      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
-      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      downloadBackup(raw, '备份-');
       toast('已导出备份'); return true;
     });
   },
@@ -265,7 +269,7 @@ window.App = {
           var d = JSON.parse(json);
           if(!Logic.isValidAppData(d)){ reject(new Error('这不是本 App 的备份，请勿导入其他文件')); return; }
           key = k; meta = {salt:o.salt, iter:it, iv:o.iv, data:o.data}; data = d;
-          return putData(text).then(function(){ resolve(); });
+          return loadData().then(function(curRaw){ if(curRaw) downloadBackup(curRaw, '导入前备份-'); }).then(function(){ return putData(text); }).then(function(){ resolve(); });
         });
       }).catch(function(){ reject(new Error('密码错误或文件损坏')); });
     });
