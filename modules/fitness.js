@@ -1,4 +1,4 @@
-﻿/* modules/fitness.js —— 健身计划 */
+/* modules/fitness.js —— 健身计划 */
 (function(){
 'use strict';
 var WK=['日','一','二','三','四','五','六'];
@@ -105,6 +105,16 @@ function showHistoryWeek(h){
   if(!h || !h.days) return;
   WV.anchor=h.from||App.Logic.todayStr(); WV.page=WV.anchor; WV.active=true; WV.readonly=true; WV.viewDays=h.days; WV.viewName=h.name||''; renderWeekView();
 }
+function loadHomeLibrary(cb){
+  if(App.EXERCISE_HOME){ cb(App.EXERCISE_HOME); return; }
+  if(App._homeQueue){ App._homeQueue.push(cb); return; }
+  App._homeQueue = [cb];
+  var s = document.createElement('script');
+  s.src = 'data/exercises-home.js';
+  s.onload = function(){ var d = App.EXERCISE_HOME || []; var q = App._homeQueue; App._homeQueue = null; q.forEach(function(f){ f(d); }); };
+  s.onerror = function(){ var q = App._homeQueue; App._homeQueue = null; q.forEach(function(f){ f([]); }); };
+  document.head.appendChild(s);
+}
 document.addEventListener('keydown', function(e){
   if(!WV.active) return;
   var m=document.getElementById('modal'); if(!m || m.classList.contains('hidden')) return;
@@ -116,6 +126,7 @@ var sub='plan';
 App.register('fitness', function(container){
   var filter='all';
   var q='';
+  var homeData=null, homeState={q:'',eq:'all',page:0};
   var selDate=null; // 锻炼日历选中的日期；null=今天
   var calY=0, calM=0; // 日历显示的年/月
   var editDraft=null; // 编辑计划时的草稿
@@ -185,6 +196,7 @@ App.register('fitness', function(container){
       body.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ editRecord(b.getAttribute('data-edit')); }); });
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ delRecord(b.getAttribute('data-del')); }); });
       var a=body.querySelector('#btnAdd'); if(a) a.addEventListener('click', function(){ editRecord(null); });
+      var hl=body.querySelector('#btnHomeLib'); if(hl) hl.addEventListener('click', openHomeLibrary);
     }
     body = pg('workouts');
     if(body){
@@ -546,9 +558,20 @@ App.register('fitness', function(container){
   // ===== 动作库 =====
   function renderRecords(){
     var recs=App.data.fitness.records||[];
-    var list=(filter==='all'?recs:recs.filter(function(r){return r.status===filter;})).filter(function(r){ return !q||(r.name||'').indexOf(q)>=0||(r.source||'').indexOf(q)>=0||(r.points||'').indexOf(q)>=0; });
+    var list=(filter==='all'?recs:recs.filter(function(r){return r.status===filter;})).filter(function(r){ return !q||(r.name||'').indexOf(q)>=0||(r.source||'').indexOf(q)>=0||(r.points||'').indexOf(q)>=0||(r.muscle||'').indexOf(q)>=0||(r.bodyPart||'').indexOf(q)>=0||(r.equipment||'').indexOf(q)>=0; });
+    function meta(r){
+      var parts=[];
+      if(r.equipment) parts.push(r.equipment);
+      if(r.bodyPart) parts.push(r.bodyPart);
+      if(r.muscle) parts.push(r.muscle);
+      if(r.secondaryMuscles&&r.secondaryMuscles.length) parts.push(r.secondaryMuscles.join('/'));
+      if(r.category) parts.push(r.category);
+      if(r.hold) parts.push('计时');
+      return parts.length?'<div class="sum-line">'+parts.map(function(x){return App.esc(x);}).join(' · ')+'</div>':'';
+    }
     var h='<div class="seg2" id="fitFilter"><button data-f="all" class="'+(filter==='all'?'on':'')+'">全部</button><button data-f="pending" class="'+(filter==='pending'?'on':'')+'">待评估</button><button data-f="added" class="'+(filter==='added'?'on':'')+'">已加入</button><button data-f="skip" class="'+(filter==='skip'?'on':'')+'">暂不加入</button></div>';
-    h+=(list.length?'<div class="record-grid">'+list.map(function(r){ return '<div class="card"><h2>'+App.esc(r.name)+' <span class="badge b-'+r.status+'">'+stL(r.status)+'</span></h2>'+(r.source?'<div class="sum-line">来源：'+App.esc(r.source)+'</div>':'')+(r.points?'<p class="pre">'+App.esc(r.points)+'</p>':'')+(r.note?'<div class="sum-line">备注：'+App.esc(r.note)+'</div>':'')+'<div class="acts"><button data-edit="'+r.id+'">编辑</button><button data-del="'+r.id+'">删除</button></div></div>'; }).join('')+'</div>':'<div class="placeholder">没有匹配的动作。</div>');
+    h+='<button class="mbtn ghost" id="btnHomeLib" style="margin-bottom:8px">🌐 居家动作库'+(homeData?('（'+homeData.length+' 个）'):'')+'</button>';
+    h+=(list.length?'<div class="record-grid">'+list.map(function(r){ return '<div class="card"><h2>'+App.esc(r.name)+' <span class="badge b-'+r.status+'">'+stL(r.status)+'</span></h2>'+meta(r)+(r.source?'<div class="sum-line">来源：'+App.esc(r.source)+'</div>':'')+(r.points?'<p class="pre">'+App.esc(r.points)+'</p>':'')+(r.note?'<div class="sum-line">备注：'+App.esc(r.note)+'</div>':'')+'<div class="acts"><button data-edit="'+r.id+'">编辑</button><button data-del="'+r.id+'">删除</button></div></div>'; }).join('')+'</div>':'<div class="placeholder">没有匹配的动作。</div>');
     return h+'<button class="mbtn ghost" id="btnAdd">＋ 添加动作</button>';
   }
 
@@ -620,6 +643,45 @@ App.register('fitness', function(container){
   }
 
   function delRecord(id){ App.confirm('删除该动作？', function(){ App.data.fitness.records=(App.data.fitness.records||[]).filter(function(x){return x.id!==id;}); App.setData(App.data); render(); }); }
+
+  // ===== 居家动作库（openGym 子集，懒加载浏览 + 加入）=====
+  function openHomeLibrary(){
+    homeState={q:'',eq:'all',page:0};
+    loadHomeLibrary(function(data){ homeData=data||[]; renderHomeModal(); });
+  }
+  function renderHomeModal(){
+    var q=homeState.q, eq=homeState.eq, page=homeState.page;
+    var list=homeData.filter(function(e){
+      if(eq!=='all' && e.equipment!==eq) return false;
+      if(q){ var hay=(e.name||'')+' '+(e.points||'')+' '+(e.muscle||'')+' '+(e.bodyPart||'')+' '+(e.equipment||''); if(hay.toLowerCase().indexOf(q.toLowerCase())<0) return false; }
+      return true;
+    });
+    var total=list.length, pages=Math.max(1, Math.ceil(total/50));
+    if(page>pages-1) page=pages-1; if(page<0) page=0; homeState.page=page;
+    var pageItems=list.slice(page*50, page*50+50);
+    var html='<div class="row" style="margin-bottom:8px"><input class="input" id="hlSearch" placeholder="搜索名称/肌群/部位" value="'+App.esc(q)+'"><select class="input" id="hlEq" style="flex:none;width:auto"><option value="all"'+(eq==='all'?' selected':'')+'>全部器械</option><option value="自重"'+(eq==='自重'?' selected':'')+'>自重</option><option value="哑铃"'+(eq==='哑铃'?' selected':'')+'>哑铃</option><option value="弹力带"'+(eq==='弹力带'?' selected':'')+'>弹力带</option></select></div>';
+    html+='<div class="sum-line" style="margin-bottom:8px">共 '+total+' 个动作 · 第 '+(page+1)+'/'+pages+' 页</div>';
+    html+='<div style="max-height:56vh;overflow:auto">'+pageItems.map(function(e){ return '<div class="card" style="margin-bottom:8px"><h2 style="font-size:14px">'+App.esc(e.name)+'</h2><div class="sum-line">'+[e.equipment,e.bodyPart,e.muscle,e.category].filter(Boolean).map(function(x){return App.esc(x);}).join(' · ')+(e.secondaryMuscles&&e.secondaryMuscles.length?' · '+App.esc(e.secondaryMuscles.join('/')):'')+'</div>'+(e.points?'<p class="pre" style="font-size:12px">'+App.esc(e.points.split('\n')[0])+'</p>':'')+'<div class="acts"><button data-hadd="'+e.extId+'">＋ 加入</button></div></div>'; }).join('')+'</div>';
+    html+='<div class="row" style="margin-top:8px"><button class="mbtn ghost" id="hlPrev"'+(page<=0?' disabled':'')+'>上一页</button><button class="mbtn ghost" id="hlNext"'+(page>=pages-1?' disabled':'')+'>下一页</button></div>';
+    App.openModal(html, { title:'居家动作库（'+homeData.length+' 个）', saveText:'关闭', onSave:function(close){ close(); } });
+    bindHomeModal();
+  }
+  function bindHomeModal(){
+    var box=document.getElementById('modal'); if(!box) return;
+    var si=box.querySelector('#hlSearch'); if(si){ var composing=false; si.addEventListener('compositionstart', function(){composing=true;}); si.addEventListener('compositionend', function(){composing=false; setTimeout(homeApply,0);}); si.addEventListener('input', function(){ if(composing) return; homeApply(); }); function homeApply(){ homeState.q=si.value; renderHomeModal(); } }
+    var eq=box.querySelector('#hlEq'); if(eq) eq.addEventListener('change', function(){ homeState.eq=eq.value; homeState.page=0; renderHomeModal(); });
+    var pv=box.querySelector('#hlPrev'); if(pv) pv.addEventListener('click', function(){ homeState.page--; renderHomeModal(); });
+    var nx=box.querySelector('#hlNext'); if(nx) nx.addEventListener('click', function(){ homeState.page++; renderHomeModal(); });
+    box.querySelectorAll('[data-hadd]').forEach(function(b){ b.addEventListener('click', function(){ addHomeRecord(b.getAttribute('data-hadd')); }); });
+  }
+  function addHomeRecord(extId){
+    var e=null; for(var i=0;i<homeData.length;i++){ if(homeData[i].extId===extId){ e=homeData[i]; break; } }
+    if(!e) return;
+    var recs=App.data.fitness.records||[];
+    if(recs.some(function(r){ return r.name===e.name; })){ App.toast('已在动作库中'); return; }
+    recs.push({ id:'f'+Date.now()+Math.random().toString(36).slice(2,6), name:e.name, srcType:e.srcType, source:e.source, points:e.points, note:e.note, status:'pending', ts:Date.now(), extId:e.extId, bodyPart:e.bodyPart, equipment:e.equipment, muscle:e.muscle, muscleKey:e.muscleKey, secondaryMuscles:e.secondaryMuscles, category:e.category, hold:e.hold, needs:e.needs, license:e.license });
+    App.data.fitness.records=recs; App.setData(App.data); App.toast('已加入动作库');
+  }
 
   function addWorkout(){
     App.openModal(
