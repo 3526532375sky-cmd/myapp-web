@@ -174,6 +174,35 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     var prev = Number(list[1].weight)||0;
     return { current:cur, previous:prev, delta:+(cur-prev).toFixed(1) };
   }
+  function parseReps(r){
+    var s = String(r==null?'':r).replace(/[^0-9.~\-–]/g,'');
+    var nums = s.split(/[~\-–]/).map(Number).filter(function(n){ return !isNaN(n); });
+    return nums.length ? Math.max.apply(null, nums) : 0;
+  }
+  // double progression：聚合 reps 近似（P0）。cfg={min,max,step}
+  function nextProgression(workouts, name, cfg){
+    cfg = cfg || {};
+    var min = Number(cfg.min)||8, max = Number(cfg.max)||12, step = Number(cfg.step)||2.5;
+    var list = (workouts||[]).filter(function(w){ return w.name===name; }).sort(function(a,b){ return a.date < b.date ? 1 : -1; });
+    if(!list.length) return { has:false };
+    var weight = Number(list[0].weight)||0;
+    var reps = parseReps(list[0].reps);
+    var isBW = !weight;
+    if(isBW){
+      if(reps>0 && reps>=max) return { has:true, isBW:true, weight:0, reps:max, advance:true, deload:false };
+      return { has:true, isBW:true, weight:0, reps:max, advance:false, deload:false };
+    }
+    if(reps >= max){
+      return { has:true, isBW:false, weight:+(weight+step).toFixed(1), reps:min, advance:true, deload:false };
+    }
+    var stagnant = 0;
+    for(var i=0;i<list.length && i<3;i++){
+      var w2=Number(list[i].weight)||0, r2=parseReps(list[i].reps);
+      if(w2===weight && r2<max) stagnant++; else break;
+    }
+    if(stagnant >= 2) return { has:true, isBW:false, weight:+(weight*0.9).toFixed(1), reps:min, advance:false, deload:true };
+    return { has:true, isBW:false, weight:weight, reps:max, advance:false, deload:false };
+  }
 
 
   // 根据日期返回当天训练计划日（覆盖周一到周日；无匹配返回 null）
@@ -369,6 +398,7 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     dueCards: dueCards,
     weightSeries: weightSeries,
     progressiveOverload: progressiveOverload,
+    nextProgression: nextProgression,
     fitnessTodayPlan: fitnessTodayPlan,
     fitnessPlanStatus: fitnessPlanStatus,
     FITNESS_PLAN: FITNESS_PLAN,

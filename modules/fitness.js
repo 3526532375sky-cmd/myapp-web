@@ -579,8 +579,15 @@ App.register('fitness', function(container){
   function renderWorkouts(){
     var w=(App.data.fitness.workouts||[]).slice();
     var names={}; w.forEach(function(r){ names[r.name]=1; });
-    var po=Object.keys(names).map(function(nm){ var p=App.Logic.progressiveOverload(w, nm); p.name=nm; return p; }).filter(function(p){ return p.delta!==null; });
-    var poHtml=po.length?'<div class="card"><h2>📈 渐进超负荷</h2>'+po.map(function(p){ var up=p.delta>0; return '<div class="rec-row"><span class="cat">'+App.esc(p.name)+'</span><span class="note wk-num">'+p.previous+' → '+p.current+' kg</span><span class="amt" style="color:'+(up?'var(--success)':'var(--danger)')+'">'+(up?'+':'')+p.delta+'</span></div>'; }).join('')+'</div>':'';
+    function cfgFor(nm){ var rec=(App.data.fitness.records||[]).find(function(r){ return r.name===nm; }); if(rec && rec.repMin!=null) return { min:rec.repMin, max:rec.repMax, step:rec.step }; return null; }
+    var po=Object.keys(names).map(function(nm){ var p=App.Logic.nextProgression(w, nm, cfgFor(nm)); p.name=nm; return p; }).filter(function(p){ return p.has; });
+    function nextTxt(p){
+      if(p.isBW) return p.advance ? '下次：进阶动作（跪姿→标准等）' : ('下次：目标 '+p.reps+' 次');
+      if(p.deload) return '下次：'+p.weight+'kg × '+p.reps+' 次（减载）';
+      if(p.advance) return '下次：'+p.weight+'kg × '+p.reps+' 次';
+      return '下次：'+p.weight+'kg × 做到 '+p.reps+' 次';
+    }
+    var poHtml=po.length?'<div class="card"><h2>📈 渐进超负荷 · 下次目标</h2>'+po.map(function(p){ return '<div class="rec-row"><span class="cat">'+App.esc(p.name)+'</span><span class="note wk-num">'+nextTxt(p)+'</span></div>'; }).join('')+'</div>':'';
     var groups={}; w.forEach(function(r){ (groups[r.date]=groups[r.date]||[]).push(r); });
     var dates=Object.keys(groups).sort(function(a,b){ return a<b?1:-1; });
     var body=dates.map(function(dt){
@@ -632,10 +639,15 @@ App.register('fitness', function(container){
       '<div class="row"><div class="field"><label>来源类型</label><select class="input" id="f2"><option value="video"'+(x&&x.srcType==='video'?' selected':'')+'>视频</option><option value="book"'+(x&&x.srcType==='book'?' selected':'')+'>书本</option><option value="web"'+(x&&x.srcType==='web'?' selected':'')+'>网页</option><option value="other"'+(x&&x.srcType==='other'?' selected':'')+'>其他</option></select></div><div class="field"><label>评估</label><select class="input" id="f3"><option value="pending"'+(x&&x.status==='pending'?' selected':'')+'>待评估</option><option value="added"'+(x&&x.status==='added'?' selected':'')+'>已加入</option><option value="skip"'+(x&&x.status==='skip'?' selected':'')+'>暂不加入</option></select></div></div>'+
       '<div class="field"><label>来源（链接/书名）</label><input class="input" id="f4" value="'+(x?App.esc(x.source||''):'')+'"></div>'+
       '<div class="field"><label>要点提炼</label><textarea class="input" id="f5">'+(x?App.esc(x.points||''):'')+'</textarea></div>'+
-      '<div class="field"><label>备注</label><input class="input" id="f6" value="'+(x?App.esc(x.note||''):'')+'"></div>',
+      '<div class="field"><label>备注</label><input class="input" id="f6" value="'+(x?App.esc(x.note||''):'')+'"></div>'+
+      '<div class="row"><div class="field"><label>次数下限（可选）</label><input class="input" id="frmn" inputmode="decimal" value="'+(x&&x.repMin!=null?App.esc(x.repMin):'')+'" placeholder="如 8"></div><div class="field"><label>次数上限（可选）</label><input class="input" id="frmx" inputmode="decimal" value="'+(x&&x.repMax!=null?App.esc(x.repMax):'')+'" placeholder="如 12"></div><div class="field"><label>增重kg（可选）</label><input class="input" id="frstep" inputmode="decimal" value="'+(x&&x.step!=null?App.esc(x.step):'')+'" placeholder="如 2.5"></div></div>',
       { title:x?'编辑动作':'添加动作', saveText:'保存', onSave:function(close){
         var n=document.getElementById('f1').value.trim(); if(!n){App.toast('请填写名称');return;}
         var obj={name:n,srcType:document.getElementById('f2').value,status:document.getElementById('f3').value,source:document.getElementById('f4').value.trim(),points:document.getElementById('f5').value.trim(),note:document.getElementById('f6').value.trim()};
+        var rmn=parseFloat(document.getElementById('frmn').value), rmx=parseFloat(document.getElementById('frmx').value), rst=parseFloat(document.getElementById('frstep').value);
+        if(!isNaN(rmn)) obj.repMin=rmn;
+        if(!isNaN(rmx)) obj.repMax=rmx;
+        if(!isNaN(rst)) obj.step=rst;
         if(id){ Object.assign(x,obj); } else { obj.id='f'+Date.now(); obj.ts=Date.now(); arr.push(obj); }
         App.data.fitness.records=arr; App.setData(App.data); close(); render(); App.toast('已保存');
       }}
