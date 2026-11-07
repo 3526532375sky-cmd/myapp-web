@@ -179,6 +179,23 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     var nums = s.split(/[~\-–]/).map(Number).filter(function(n){ return !isNaN(n); });
     return nums.length ? Math.max.apply(null, nums) : 0;
   }
+  // 聚合近 N 天各 body-map 肌群的训练组数（按动作主肌群 muscleKey）
+  function muscleVolume(workouts, records, days){
+    days = days || 28;
+    var cutoff = addDays(todayStr(), -days);
+    var vol = {};
+    var recByName = {};
+    (records||[]).forEach(function(r){ if(r && r.name) recByName[r.name] = r; });
+    (workouts||[]).forEach(function(w){
+      if(!w.date || w.date < cutoff) return;
+      var rec = recByName[w.name];
+      var key = rec && rec.muscleKey;
+      if(!key) return;
+      var sets = Number(w.sets)||1;
+      vol[key] = (vol[key]||0) + sets;
+    });
+    return vol;
+  }
   // double progression：聚合 reps 近似（P0）。cfg={min,max,step}
   function nextProgression(workouts, name, cfg){
     cfg = cfg || {};
@@ -399,6 +416,7 @@ var EXERCISE_LIBRARY = [{"name":"俯卧撑","points":"手略宽于肩，身体�
     weightSeries: weightSeries,
     progressiveOverload: progressiveOverload,
     nextProgression: nextProgression,
+    muscleVolume: muscleVolume,
     fitnessTodayPlan: fitnessTodayPlan,
     fitnessPlanStatus: fitnessPlanStatus,
     FITNESS_PLAN: FITNESS_PLAN,

@@ -488,3 +488,7 @@ html[data-theme="dark"]{ --glass:rgba(23,26,33,.72); --glass-bd:rgba(255,255,255
 .holding .h-r3 span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .holding .h-acts{display:flex;justify-content:flex-end;gap:14px;margin-top:8px;}
 .holding .h-acts .go{margin:0;min-height:0;}
+/* 肌群平衡 · 人形图 */
+.mb-wrap{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;}
+.mb-wrap #muscleSvg{flex:1;min-width:180px;text-align:center;}
+.mb-side{flex:1;min-width:200px;}

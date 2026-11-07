@@ -115,6 +115,16 @@ function loadHomeLibrary(cb){
   s.onerror = function(){ var q = App._homeQueue; App._homeQueue = null; q.forEach(function(f){ f([]); }); };
   document.head.appendChild(s);
 }
+function loadMuscleMap(cb){
+  if(App.MUSCLEMAP){ cb(App.MUSCLEMAP); return; }
+  if(App._mmQueue){ App._mmQueue.push(cb); return; }
+  App._mmQueue = [cb];
+  var s = document.createElement('script');
+  s.src = 'modules/musclemap-data.js';
+  s.onload = function(){ var d = App.MUSCLEMAP || null; var q = App._mmQueue; App._mmQueue = null; q.forEach(function(f){ f(d); }); };
+  s.onerror = function(){ var q = App._mmQueue; App._mmQueue = null; q.forEach(function(f){ f(null); }); };
+  document.head.appendChild(s);
+}
 document.addEventListener('keydown', function(e){
   if(!WV.active) return;
   var m=document.getElementById('modal'); if(!m || m.classList.contains('hidden')) return;
@@ -202,6 +212,7 @@ App.register('fitness', function(container){
     if(body){
       body.querySelectorAll('[data-del]').forEach(function(b){ b.addEventListener('click', function(){ var id=b.getAttribute('data-del'); App.deleteWithUndo({ apply:function(){ App.data.fitness.workouts=(App.data.fitness.workouts||[]).filter(function(x){return x.id!==id;}); }, render:render }); }); });
       var aw=body.querySelector('#btnAddW'); if(aw) aw.addEventListener('click', addWorkout);
+      if((App.data.fitness.workouts||[]).length){ loadMuscleMap(renderMuscleMap); }
     }
     body = pg('weights');
     if(body){
@@ -576,6 +587,48 @@ App.register('fitness', function(container){
   }
 
   // ===== 训练记录 =====
+  var MB={view:'front',sel:null};
+  var MUSCLE_ZH={ trapezius:'斜方肌', deltoids:'三角肌', chest:'胸', 'upper-back':'上背', serratus:'前锯肌', biceps:'肱二头肌', triceps:'肱三头肌', forearm:'前臂', abs:'腹肌', obliques:'腹斜肌', 'lower-back':'下背', gluteal:'臀', quadriceps:'股四头肌', hamstring:'腘绳肌', adductors:'内收肌', 'hip-flexors':'髋屈肌', calves:'小腿', tibialis:'胫骨前肌' };
+  var INERT={ head:1, hair:1, neck:1, hands:1, knees:1, ankles:1, feet:1 };
+  function imbalanceHint(vol){
+    var push=(vol.chest||0)+(vol.deltoids||0)+(vol.triceps||0);
+    var pull=(vol['upper-back']||0)+(vol.biceps||0);
+    var ant=(vol.chest||0)+(vol.abs||0)+(vol.quadriceps||0);
+    var post=(vol['upper-back']||0)+(vol.gluteal||0)+(vol.hamstring||0);
+    var h='<div class="sum-line">推（胸/肩/三头）'+push+' 组 · 拉（上背/二头）'+pull+' 组</div>';
+    h+='<div class="sum-line">前侧（胸/腹/股四）'+ant+' 组 · 后侧（上背/臀/腘绳）'+post+' 组</div>';
+    if(push>0 && pull>0 && push > pull*1.5) h+='<div class="sum-line" style="color:var(--warning)">⚠️ 推明显多于拉，建议加强面拉/划船/肩外旋（肱骨前移纠正）</div>';
+    if(ant>0 && post>0 && ant > post*1.5) h+='<div class="sum-line" style="color:var(--warning)">⚠️ 前侧明显多于后侧，注意加强上背/臀/腘绳肌</div>';
+    return h;
+  }
+  function renderMuscleMap(){
+    var box=document.getElementById('muscleSvg'); if(!box) return;
+    var data=App.MUSCLEMAP; if(!data) return;
+    var vol=App.Logic.muscleVolume(App.data.fitness.workouts, App.data.fitness.records, 28);
+    var v=data[MB.view] || data.front;
+    var max=0; Object.keys(vol).forEach(function(k){ if(vol[k]>max) max=vol[k]; });
+    function color(sets){
+      if(!sets) return '#e3e7ee';
+      var r=max>0?sets/max:0;
+      if(r<0.34) return '#f5c97b';
+      if(r<0.67) return '#f59e0b';
+      return '#e07a7a';
+    }
+    var svg='<svg viewBox="'+v.vb+'" style="width:100%;max-width:220px;margin:0 auto;display:block">';
+    Object.keys(v.p).forEach(function(k){
+      var inert=!!INERT[k];
+      var c=inert ? '#edf0f5' : color(vol[k]);
+      v.p[k].forEach(function(d){ svg+='<path data-m="'+k+'" data-inert="'+(inert?1:0)+'" d="'+d+'" fill="'+c+'" stroke="'+(inert?'#d5dae2':'#b9c1cd')+'" stroke-width="1.4" style="cursor:'+(inert?'default':'pointer')+'"/>'; });
+    });
+    svg+='</svg>';
+    box.innerHTML=svg;
+    var side=document.getElementById('muscleSide');
+    var btns='<div class="row" style="margin-bottom:8px"><button class="mbtn ghost" id="mbFront" style="flex:none;padding:8px 14px"'+(MB.view==='front'?' disabled':'')+'>正面</button><button class="mbtn ghost" id="mbBack" style="flex:none;padding:8px 14px"'+(MB.view==='back'?' disabled':'')+'>背面</button></div>';
+    side.innerHTML=btns+imbalanceHint(vol)+(MB.sel?'<div class="sum-line" style="margin-top:6px;font-weight:600">'+App.esc(MUSCLE_ZH[MB.sel]||MB.sel)+'：'+(vol[MB.sel]||0)+' 组</div>':'<div class="sum-line" style="margin-top:6px;color:var(--text-3)">点肌群查看组数</div>');
+    var f=document.getElementById('mbFront'); if(f) f.addEventListener('click', function(){ MB.view='front'; MB.sel=null; renderMuscleMap(); });
+    var b=document.getElementById('mbBack'); if(b) b.addEventListener('click', function(){ MB.view='back'; MB.sel=null; renderMuscleMap(); });
+    box.querySelectorAll('path[data-m]').forEach(function(p){ if(p.getAttribute('data-inert')==='1') return; p.addEventListener('click', function(){ MB.sel=p.getAttribute('data-m'); renderMuscleMap(); }); });
+  }
   function renderWorkouts(){
     var w=(App.data.fitness.workouts||[]).slice();
     var names={}; w.forEach(function(r){ names[r.name]=1; });
@@ -600,7 +653,8 @@ App.register('fitness', function(container){
       }).join('');
       return '<div class="card"><h2>'+head+'</h2>'+rows+'</div>';
     }).join('');
-    return poHtml+(body||'<div class="placeholder">暂无训练记录。到「计划」勾选完成项，或点下方手动添加。</div>')+'<button class="mbtn ghost" id="btnAddW">＋ 添加训练记录</button>';
+    var mb=w.length?'<div class="card"><h2>🧍 肌群平衡 · 近4周</h2><div class="mb-wrap"><div id="muscleSvg"></div><div class="mb-side" id="muscleSide"></div></div></div>':'';
+    return mb+poHtml+(body||'<div class="placeholder">暂无训练记录。到「计划」勾选完成项，或点下方手动添加。</div>')+'<button class="mbtn ghost" id="btnAddW">＋ 添加训练记录</button>';
   }
 
   // ===== 体重 =====
